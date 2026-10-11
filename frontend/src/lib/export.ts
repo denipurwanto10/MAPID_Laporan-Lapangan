@@ -1,4 +1,4 @@
-import { API_BASE, ApiError } from "./api";
+import { ApiError } from "./api";
 import type { SortOrder, StatusFilter } from "../types/report";
 
 interface ExportParams {
@@ -27,8 +27,8 @@ export interface ExportResult {
 }
 
 /**
- * Unduh Excel (.xlsx) langsung dari backend — satu request, satu file.
- * Workbook disusun di server (backend/src/exportXlsx.ts), frontend hanya mengunduh.
+ * Unduh Excel (.xlsx) dari Supabase Edge Function — satu request, satu file.
+ * Workbook disusun di server (supabase/functions/export-xlsx), frontend hanya mengunduh.
  */
 export async function exportReports(params: ExportParams): Promise<ExportResult> {
   const search = new URLSearchParams();
@@ -38,9 +38,14 @@ export async function exportReports(params: ExportParams): Promise<ExportResult>
   // Offset zona waktu agar jam di Excel sama seperti sebelumnya (dibuat di client).
   search.set("tz", String(new Date().getTimezoneOffset()));
 
+  const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-xlsx?${search.toString()}`;
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/api/reports/export.xlsx?${search.toString()}`);
+    res = await fetch(fnUrl, {
+      headers: {
+        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+    });
   } catch {
     throw new ApiError(0, "Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.");
   }

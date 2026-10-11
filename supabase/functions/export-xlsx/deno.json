@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs"
+  }
+}
