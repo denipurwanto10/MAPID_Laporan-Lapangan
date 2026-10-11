@@ -31,9 +31,33 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase functions deploy export-xlsx --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      # Fail-fast dengan pesan yang jelas kalau secret belum di-set di repo.
+      # Tanpa step ini CLI gagal dengan "Missing value for flag --project-ref"
+      # yang tidak menjelaskan penyebab sebenarnya.
+      - name: Validate Supabase credentials
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - run: supabase functions deploy bulk-status --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Secret SUPABASE_ACCESS_TOKEN belum di-set di repository settings."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "::error::Secret SUPABASE_PROJECT_REF belum di-set di repository settings."
+            exit 1
+          fi
+
+      # --use-api: bundling server-side, jadi tidak butuh Docker di runner.
+      # --no-verify-jwt: fungsi dipanggil frontend dengan anon key lewat
+      # RLS, bukan JWT user — konsisten dengan supabase/config.toml.
+      - name: Deploy Edge Functions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          supabase functions deploy export-xlsx bulk-status \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --use-api \
+            --no-verify-jwt
