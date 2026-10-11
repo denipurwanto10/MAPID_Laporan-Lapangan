@@ -307,33 +307,33 @@ function App() {
           open
           onOpenChange={() => !busy && setConfirm(null)}
           title={
-            confirm.kind === 'approve'
-              ? 'Setujui laporan ini?'
-              : confirm.kind === 'reject'
-                ? 'Tolak laporan ini?'
-                : confirm.kind === 'delete'
-                  ? 'Hapus laporan ini?'
-                  : `${confirm.status === 'approved' ? 'Setujui' : 'Tolak'} ${selectedIds.length} laporan?`
+            confirm.kind === 'bulk'
+              ? `${confirm.status === 'approved' ? 'Setujui' : 'Tolak'} ${selectedIds.length} laporan?`
+              : confirm.kind === 'approve'
+                ? 'Setujui laporan ini?'
+                : confirm.kind === 'reject'
+                  ? 'Tolak laporan ini?'
+                  : 'Hapus laporan ini?'
           }
           description={
-            confirm.kind === 'approve'
-              ? `“${confirm.report.nama}” akan ditandai Disetujui dan tidak bisa diubah lagi.`
-              : confirm.kind === 'reject'
-                ? `“${confirm.report.nama}” akan ditandai Ditolak dan tidak bisa diubah lagi.`
-                : confirm.kind === 'delete'
-                  ? `“${confirm.report.nama}” akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`
-                  : `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Laporan yang sudah diputuskan dilewati otomatis.`
+            confirm.kind === 'bulk'
+              ? `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Laporan yang sudah diputuskan dilewati otomatis.`
+              : confirm.kind === 'approve'
+                ? `“${confirm.report.nama}” akan ditandai Disetujui dan tidak bisa diubah lagi.`
+                : confirm.kind === 'reject'
+                  ? `“${confirm.report.nama}” akan ditandai Ditolak dan tidak bisa diubah lagi.`
+                  : `“${confirm.report.nama}” akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`
           }
           confirmLabel={
-            confirm.kind === 'approve'
-              ? 'Setujui laporan'
-              : confirm.kind === 'reject'
-                ? 'Tolak laporan'
-                : confirm.kind === 'delete'
-                  ? 'Hapus laporan'
-                  : confirm.status === 'approved'
-                    ? 'Setujui semua'
-                    : 'Tolak semua'
+            confirm.kind === 'bulk'
+              ? confirm.status === 'approved'
+                ? 'Setujui semua'
+                : 'Tolak semua'
+              : confirm.kind === 'approve'
+                ? 'Setujui laporan'
+                : confirm.kind === 'reject'
+                  ? 'Tolak laporan'
+                  : 'Hapus laporan'
           }
           tone={confirm.kind === 'approve' || confirm.kind === 'bulk' ? 'approve' : 'reject'}
           busy={busy}
