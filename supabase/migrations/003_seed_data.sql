@@ -2,6 +2,7 @@
 -- Idempotent: only inserts if nama doesn't exist
 -- Demo ini sengaja memakai 5 laporan berstatus 'pending' saja supaya
 -- alur uji (setujui / tolak) bisa langsung dicoba dari dashboard kosong.
+-- Isi harus identik dengan data demo di dashboard agar reset konsisten.
 
 INSERT INTO reports (nama, deskripsi, status)
 SELECT v.nama, v.deskripsi, v.status::report_status

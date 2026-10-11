@@ -65,20 +65,27 @@ serve(async (req: Request) => {
     });
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  // Teruskan token frontend; RLS di database yang menegakkan aturan
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth) {
+    return new Response(JSON.stringify({ error: "Missing authorization" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const apikey = req.headers.get("apikey") ?? "";
 
   // Deduplicate ids
   const uniqueIds = [...new Set(ids)];
 
   // Update only pending rows, return updated rows
-  const query = `${supabaseUrl}/rest/v1/reports?id=in.(${uniqueIds.join(",")})&status=eq.pending&select=id,nama,deskripsi,status,created_at,updated_at`;
+  const query = `${Deno.env.get("SUPABASE_URL")}/rest/v1/reports?id=in.(${uniqueIds.join(",")})&status=eq.pending&select=id,nama,deskripsi,status,created_at,updated_at`;
 
   const updateRes = await fetch(query, {
     method: "PATCH",
     headers: {
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${supabaseKey}`,
+      "apikey": apikey,
+      "Authorization": auth,
       "Content-Type": "application/json",
       "Prefer": "return=representation",
     },
@@ -104,11 +111,11 @@ serve(async (req: Request) => {
   
   if (missing.length > 0) {
     // Check which are not found vs which are already final
-    const checkQuery = `${supabaseUrl}/rest/v1/reports?id=in.(${missing.join(",")})&select=id,status`;
+    const checkQuery = `${Deno.env.get("SUPABASE_URL")}/rest/v1/reports?id=in.(${missing.join(",")})&select=id,status`;
     const checkRes = await fetch(checkQuery, {
       headers: {
-        "apikey": supabaseKey,
-        "Authorization": `Bearer ${supabaseKey}`,
+        "apikey": apikey,
+        "Authorization": auth,
       },
     });
     

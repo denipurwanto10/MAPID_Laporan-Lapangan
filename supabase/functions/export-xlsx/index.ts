@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs";
+// Gunakan npm: specifier (Deno native) untuk SheetJS xlsx.
+// Catatan: registry npm publik SheetJS berhenti di 0.18.5; versi di atas itu
+// hanya tersedia via CDN (yang diblokir Edge Runtime), jadi pin 0.18.5.
+import * as XLSX from "npm:xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,12 +92,20 @@ serve(async (req: Request) => {
   const order = url.searchParams.get("order") || "desc";
   const tzMinutes = Number(url.searchParams.get("tz")) || 0;
 
-  // Supabase client for server-side query
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  
+  // Teruskan token kiriman frontend. Edge Function sengaja TIDAK memakai
+  // service_role: seluruh aturan akses ditegakkan RLS, dan query di bawah
+  // hanya butuh hak baca (policy SELECT mengizinkan publik).
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth) {
+    return new Response(JSON.stringify({ error: "Missing authorization" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const apikey = req.headers.get("apikey") ?? "";
+
   // Build query
-  let query = `${supabaseUrl}/rest/v1/reports?select=id,nama,deskripsi,status,created_at,updated_at`;
+  let query = `${Deno.env.get("SUPABASE_URL")}/rest/v1/reports?select=id,nama,deskripsi,status,created_at,updated_at`;
   
   if (status !== "all") {
     query += `&status=eq.${status}`;
@@ -112,8 +123,8 @@ serve(async (req: Request) => {
 
   const res = await fetch(query, {
     headers: {
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${supabaseKey}`,
+      apikey,
+      "Authorization": auth,
     },
   });
 

@@ -44,6 +44,7 @@ export async function exportReports(params: ExportParams): Promise<ExportResult>
     res = await fetch(fnUrl, {
       headers: {
         "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
       },
     });
   } catch {
