@@ -392,6 +392,9 @@ export async function deleteReport(db: DbQuery, id: number, user: AuthUser): Pro
     throw new AppError(409, 'Laporan hanya bisa dihapus selama menunggu keputusan.');
   }
 
+  // Hitung sisa laporan pending MILIK PEMILIK laporan (prev.reporter_id),
+  // bukan milik penelepon — admin yang menghapus laporan orang lain tidak
+  // boleh dihitung dari laporannya sendiri.
   const result = await db.query(
     `WITH total AS (
        SELECT COUNT(*)::int AS c FROM reports WHERE reporter_id = $1 AND status = 'pending'
@@ -399,13 +402,13 @@ export async function deleteReport(db: DbQuery, id: number, user: AuthUser): Pro
      DELETE FROM reports USING total
       WHERE reports.id = $2 AND reports.status = 'pending' AND total.c > 1
       RETURNING reports.id`,
-    [user.id, id],
+    [prev.reporter_id, id],
   );
   if (result.rows[0]) return;
 
   const countRes = await db.query(
     `SELECT COUNT(*)::int AS c FROM reports WHERE reporter_id = $1 AND status = 'pending'`,
-    [user.id],
+    [prev.reporter_id],
   );
   const left = (countRes.rows[0] as { c: number } | undefined)?.c ?? 0;
   if (left <= 1) {

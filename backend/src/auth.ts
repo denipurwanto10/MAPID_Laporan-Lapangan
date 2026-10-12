@@ -100,12 +100,6 @@ export async function revokeUserSessions(db: DbQuery, userId: number): Promise<v
   await db.query(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
 }
 
-/** Bersihkan sesi kedaluwarsa; dipanggil admin dari UI occasionally. */
-export async function purgeExpiredSessions(db: DbQuery): Promise<number> {
-  const res = await db.query(`DELETE FROM sessions WHERE expires_at <= now()`);
-  return Number((res.rows[0] as { count?: number } | undefined)?.count ?? 0);
-}
-
 /** Validasi role kiriman client (CRUD akun oleh admin). */
 export function parseRole(value: unknown): UserRole {
   if (typeof value === 'string' && (USER_ROLES as readonly string[]).includes(value)) {

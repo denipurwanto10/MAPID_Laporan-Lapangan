@@ -15,21 +15,6 @@ export const REPORTER_ROLES: readonly UserRole[] = ['admin', 'pelapor'];
 /** Peran yang boleh mengelola akun pengguna. */
 export const ADMIN_ROLES: readonly UserRole[] = ['admin'];
 
-/**
- * Transisi status yang diizinkan.
- *
- * - pending -> approved / rejected : keputusan pertama oleh approver (atau admin).
- * - approved <-> rejected          : revisi keputusan oleh approver (atau admin).
- *
- * Pelapor tidak punya akses ke transisi mana pun — dia hanya boleh mengubah
- * isi laporan miliknya selama statusnya masih pending.
- */
-export const ALLOWED_TRANSITIONS: Readonly<Record<ReportStatus, readonly ReportStatus[]>> = {
-  pending: ['approved', 'rejected'],
-  approved: ['rejected', 'approved'],
-  rejected: ['approved', 'rejected'],
-};
-
 /** Akun pengguna tanpa data sensitif (dipakai di respons API). */
 export interface User {
   id: number;
