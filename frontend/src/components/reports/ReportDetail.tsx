@@ -133,6 +133,9 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
   // Approver tidak boleh menghapus; pemilik boleh menghapus; admin boleh.
   const canDeleteThis = pending && (isOwner || isAdmin) && canDelete;
   const canUndo = !pending && isDecider && shown?.status === "rejected" ? "approved" : !pending && isDecider && shown?.status === "approved" ? "rejected" : null;
+  // Tombol yang sudah jadi status saat ini di-disable; yang satunya (revisi) tetap aktif.
+  const disableApprove = shown?.status === "approved";
+  const disableReject = shown?.status === "rejected";
 
   return (
     <Sheet open={report !== null} onOpenChange={(open) => !open && onClose()}>
@@ -257,11 +260,11 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                 </>
               ) : canUndo ? (
                 <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" variant="approve" className="h-11" disabled={busy} onClick={() => onApprove(shown)}>
+                  <Button type="button" variant="approve" className="h-11" disabled={busy || disableApprove} onClick={() => onApprove(shown)}>
                     <Check aria-hidden="true" />
                     Setujui
                   </Button>
-                  <Button type="button" variant="reject" className="h-11" disabled={busy} onClick={() => onReject(shown)}>
+                  <Button type="button" variant="reject" className="h-11" disabled={busy || disableReject} onClick={() => onReject(shown)}>
                     <X aria-hidden="true" />
                     Tolak
                   </Button>
