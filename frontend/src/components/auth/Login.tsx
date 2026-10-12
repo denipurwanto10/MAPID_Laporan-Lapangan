@@ -83,7 +83,7 @@ export function Login({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
             Coba dengan akun demo
           </h2>
           <p className={cn("text-xs", dark ? "text-white/60" : "text-muted-foreground")}>
-            Ketuk salah satu untuk mengisi form, lalu tekan Masuk.
+            Pilih salah satu untuk mengisi form, lalu Masuk.
           </p>
         </div>
         <ul
@@ -151,7 +151,7 @@ export function Login({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
             Laporan Lapangan
           </h1>
           <p className="max-w-sm text-sm leading-relaxed text-white/70 sm:text-base">
-            Masuk dengan akun Anda untuk melihat, membuat, dan memutuskan laporan dari lapangan.
+            Masuk untuk membuat, melihat, dan memutuskan laporan lapangan.
           </p>
         </div>
 
@@ -167,7 +167,7 @@ export function Login({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
           >
             <div className="flex flex-col gap-1.5">
               <h2 className="font-display text-3xl">Masuk</h2>
-              <p className="text-sm text-muted-foreground">Gunakan username dan password dari admin.</p>
+              <p className="text-sm text-muted-foreground">Pakai akun yang diberikan admin.</p>
             </div>
 
             <div className="flex flex-col gap-2">

@@ -611,7 +611,7 @@ describe('manajemen akun (khusus admin)', () => {
 
   it('admin bisa mengubah peran', async () => {
     const list = await api('/api/users');
-    const target = list.body.data.find((u: any) => u.username === 'petugas1');
+    const target = list.body.data.users.find((u: any) => u.username === 'petugas1');
     const { status, body } = await api(`/api/users/${target.id}`, {
       method: 'PATCH',
       body: JSON.stringify({ role: 'pelapor' }),
@@ -628,7 +628,7 @@ describe('manajemen akun (khusus admin)', () => {
 
   it('akun bisa dihapus', async () => {
     const list = await api('/api/users');
-    const target = list.body.data.find((u: any) => u.username === 'petugas1');
+    const target = list.body.data.users.find((u: any) => u.username === 'petugas1');
     const { status } = await api(`/api/users/${target.id}`, { method: 'DELETE' });
     assert.equal(status, 200);
   });

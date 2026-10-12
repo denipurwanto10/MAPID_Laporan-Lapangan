@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { ClipboardList, FileText, LogOut, Menu, Plus, Users } from "lucide-react";
+import { toast } from "sonner";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "../ui/button";
 import { useAuth } from "../../context/AuthContext";
@@ -45,7 +46,7 @@ function Brand({ compact = false, hideIcon = false }: { compact?: boolean; hideI
         <span className={cn("font-display truncate pb-[3px] leading-[1.25]", compact ? "text-lg" : "text-xl sm:text-[22px]")}>
           Laporan Lapangan
         </span>
-        <span className={cn("truncate text-xs text-muted-foreground", compact && "max-[359px]:hidden")}>Panel peninjau</span>
+        <span className={cn("truncate text-xs text-muted-foreground", compact && "max-[359px]:hidden")}>Panel</span>
       </span>
     </span>
   );
@@ -140,7 +141,7 @@ function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connecti
         <NavItem
           id="laporan"
           label="Laporan"
-          hint="Tinjau laporan"
+          hint="Lihat dan putuskan"
           Icon={FileText}
           active={view === "laporan"}
           onNavigate={onNavigate}
@@ -201,7 +202,9 @@ function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connecti
             size="icon"
             aria-label="Keluar dari akun"
             title="Keluar"
-            onClick={() => void logout()}
+            onClick={() => {
+              void logout().then(() => toast.success("Keluar."));
+            }}
             className={cn(
               "size-10 shrink-0 rounded-xl",
               profileActive

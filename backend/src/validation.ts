@@ -1,5 +1,5 @@
 import { AppError } from './errors';
-import { REPORT_STATUSES, UPDATABLE_STATUSES, USER_ROLES, type ListQuery, type ReportStatus, type UserRole } from './types';
+import { REPORT_STATUSES, UPDATABLE_STATUSES, USER_ROLES, type ListQuery, type ReportStatus, type UserListQuery, type UserRole } from './types';
 
 export const NAMA_MAX = 200;
 export const DESKRIPSI_MAX = 2000;
@@ -41,6 +41,26 @@ export function validateStatusChange(body: unknown): ReportStatus {
     return status as ReportStatus;
   }
   throw new AppError(400, 'Status hanya boleh "approved" atau "rejected"');
+}
+
+/**
+ * Parsing query GET /api/users. Defensif: nilai tak valid kembali ke default
+ * (bukan 400) karena query URL sering diketik/diubah manual.
+ */
+export function parseUserListQuery(query: unknown): UserListQuery {
+  const q = (
+    isRecord(query) && typeof query.q === 'string' ? query.q.trim() : ''
+  ).slice(0, SEARCH_MAX);
+  const rawRole = isRecord(query) && typeof query.role === 'string' ? query.role.trim() : '';
+  const role = (USER_ROLES as readonly string[]).includes(rawRole)
+    ? (rawRole as UserRole)
+    : undefined;
+  const limit = Math.min(
+    toPositiveInt(isRecord(query) ? query.limit : undefined, LIST_LIMIT_DEFAULT),
+    LIST_LIMIT_MAX,
+  );
+  const page = toPositiveInt(isRecord(query) ? query.page : undefined, 1);
+  return { page, limit, role, q };
 }
 
 /** Validasi param :id harus integer positif. */

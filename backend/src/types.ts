@@ -94,3 +94,18 @@ export interface StatusHistory {
   decided_by_name?: string | null;
   changed_at: string;
 }
+
+/** Parameter query GET /api/users. Semua opsional, ada nilai default yang aman. */
+export interface UserListQuery {
+  page: number;
+  limit: number;
+  role?: UserRole;
+  q: string;
+}
+
+export interface UserRoleCounts {
+  all: number;
+  admin: number;
+  approver: number;
+  pelapor: number;
+}

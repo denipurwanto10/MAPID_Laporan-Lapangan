@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import type { AuthUser } from "../types/report";
 
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const session = await api.login(username, password);
     setUser(session.user);
+    toast.success(`Masuk sebagai ${session.user.username}.`);
   }, []);
 
   const logout = useCallback(async () => {

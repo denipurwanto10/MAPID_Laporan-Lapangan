@@ -155,8 +155,8 @@ function App() {
       const { truncated } = await exportReports({ status: filter, q: query, order })
       toast.success(
         truncated
-          ? 'Laporan diunduh (XLSX). Sebagian data dipotong karena melebihi batas 5000 baris.'
-          : 'Laporan diunduh (XLSX).',
+          ? 'Berhasil diunduh (XLSX). Sebagian data dipotong (batas 5000 baris).'
+          : 'Berhasil diunduh (XLSX).',
       )
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Gagal mengunduh data. Coba lagi.')
@@ -389,12 +389,12 @@ function App() {
           }
           description={
             confirm.kind === 'bulk'
-              ? `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Laporan yang sudah diputuskan dilewati otomatis.`
+              ? `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Yang sudah diputuskan dilewati.`
               : confirm.kind === 'approve'
-                ? `“${confirm.report.nama}” akan ditandai Disetujui dan tidak bisa diubah lagi.`
+                ? `“${confirm.report.nama}” akan disetujui. Tidak bisa diubah lagi.`
                 : confirm.kind === 'reject'
-                  ? `“${confirm.report.nama}” akan ditandai Ditolak dan tidak bisa diubah lagi.`
-                  : `“${confirm.report.nama}” akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`
+                  ? `“${confirm.report.nama}” akan ditolak. Tidak bisa diubah lagi.`
+                  : `“${confirm.report.nama}” akan dihapus permanen. Tidak bisa dibatalkan.`
           }
           confirmLabel={
             confirm.kind === 'bulk'

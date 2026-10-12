@@ -89,8 +89,8 @@ export function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <StateCard
       title="Belum ada laporan"
-      description="Mulai dengan menambahkan laporan lapangan pertama. Laporan yang dibuat akan berstatus Menunggu."
-      actionLabel="Buat laporan pertama"
+      description="Buat laporan pertama."
+      actionLabel="Buat laporan"
       onAction={onAdd}
     >
       <Inbox aria-hidden="true" className="size-5" />
@@ -100,8 +100,8 @@ export function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 export function EmptySearchState({
   onClear,
-  title = "Tidak ada hasil yang cocok",
-  description = "Coba kata kunci lain atau ubah filter status untuk menemukan laporan.",
+  title = "Tidak ada hasil",
+  description = "Coba kata kunci lain atau ubah filter.",
 }: {
   onClear: () => void;
   title?: string;

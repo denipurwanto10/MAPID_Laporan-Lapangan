@@ -8,6 +8,9 @@ import type {
   ReportSummary,
   StatusHistory,
   User,
+  UserRole,
+  UserListQuery,
+  UserRoleCounts,
 } from './types';
 
 const COLUMNS =
@@ -24,14 +27,66 @@ const COLS_R = COLUMNS.split(', ').map((c) => `r.${c}`).join(', ');
 const RETURNING_REPORT = `${COLUMNS}, (SELECT username FROM users WHERE id = reports.reporter_id) AS reporter_name`;
 
 /** Daftar akun pengguna — hanya dipakai admin. */
-export async function listUsers(db: DbQuery): Promise<(User & { report_count: number })[]> {
+export async function listUsers(db: DbQuery, q: UserListQuery): Promise<(User & { report_count: number })[]> {
+  const { text: where, params } = userScopeClause(q);
+  const offset = (q.page - 1) * q.limit;
   const res = await db.query(
     `SELECT u.id, u.username, u.role, u.created_at,
             (SELECT COUNT(*)::int FROM reports r WHERE r.reporter_id = u.id) AS report_count
        FROM users u
-      ORDER BY u.id`,
+       ${where}
+      ORDER BY u.id
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, q.limit, offset],
   );
   return res.rows as (User & { report_count: number })[];
+}
+
+/** Jumlah akun per peran — mengikuti filter yang sama dengan daftar. */
+export async function countUsersByRole(db: DbQuery, q: UserListQuery): Promise<UserRoleCounts> {
+  const { text: where, params } = userScopeClause(q, { ignoreRole: true });
+  const res = await db.query(
+    `SELECT role, COUNT(*)::int AS count FROM users ${where} GROUP BY role`,
+    [...params],
+  );
+  const counts: UserRoleCounts = { all: 0, admin: 0, approver: 0, pelapor: 0 };
+  for (const row of res.rows as { role: UserRole; count: number }[]) {
+    if (row.role === 'admin' || row.role === 'approver' || row.role === 'pelapor') {
+      counts[row.role] = row.count;
+      counts.all += row.count;
+    }
+  }
+  return counts;
+}
+
+/** Jumlah akun yang cocok filter (untuk menentukan nomor halaman terakhir). */
+export async function countUsers(db: DbQuery, q: UserListQuery): Promise<number> {
+  const { text: where, params } = userScopeClause(q);
+  const res = await db.query(`SELECT COUNT(*)::int AS total FROM users ${where}`, [...params]);
+  return (res.rows[0] as { total: number } | undefined)?.total ?? 0;
+}
+
+/**
+ * Filter WHERE untuk daftar akun. Sama polanya dengan scopeClause laporan:
+ * nilai user masuk lewat parameter, wildcard LIKE di-escape supaya "%"/"_"
+ * dicari harfiah.
+ */
+function userScopeClause(
+  q: UserListQuery,
+  opts: { ignoreRole?: boolean } = {},
+): { text: string; params: unknown[] } {
+  const conds: string[] = [];
+  const params: unknown[] = [];
+
+  if (q.role && !opts.ignoreRole) {
+    params.push(q.role);
+    conds.push(`role = $${params.length}::user_role`);
+  }
+  if (q.q) {
+    params.push(`%${q.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    conds.push(`username ILIKE $${params.length} ESCAPE '\\'`);
+  }
+  return { text: conds.length ? `WHERE ${conds.join(' AND ')}` : '', params };
 }
 
 async function findById(db: DbQuery, id: number): Promise<Report | undefined> {

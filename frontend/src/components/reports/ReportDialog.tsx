@@ -110,7 +110,7 @@ export function ReportDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {initial ? "Ubah nama atau deskripsinya di bawah ini." : "Isi nama dan deskripsi singkat kejadiannya."}
+            {initial ? "Ubah nama atau deskripsinya." : "Isi nama dan deskripsi singkat kejadiannya."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4" noValidate>
@@ -125,7 +125,7 @@ export function ReportDialog({
               id="report-nama"
               value={nama}
               onChange={(e) => setNama(e.target.value)}
-              placeholder="Contoh: Jalan berlubang di Jl. Merdeka"
+              placeholder="Jalan berlubang di Jl. Merdeka, Bandung"
               maxLength={NAMA_MAX + 20}
               autoComplete="off"
               aria-invalid={Boolean(errors.nama)}

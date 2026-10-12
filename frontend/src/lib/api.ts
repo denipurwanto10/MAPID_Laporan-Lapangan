@@ -9,6 +9,8 @@ import type {
   StatusFilter,
   StatusHistory,
   UserRole,
+  UserListQuery,
+  UserRoleCounts,
 } from "../types/report";
 
 /**
@@ -249,9 +251,17 @@ export const api = {
 
   /* -------------------------------------------------------------- users -- */
 
-  /** Daftar akun — hanya admin. */
-  async listUsers(): Promise<ManagedUser[]> {
-    return request<ManagedUser[]>("/users");
+  /** Daftar akun — hanya admin, dengan pagination + filter. */
+  async listUsers(
+    query: Partial<UserListQuery> = {},
+  ): Promise<{ users: ManagedUser[]; pagination: ListMeta; counts: UserRoleCounts }> {
+    const params = new URLSearchParams();
+    if (query.page) params.set('page', String(query.page));
+    if (query.limit) params.set('limit', String(query.limit));
+    if (query.role) params.set('role', query.role);
+    if (query.q) params.set('q', query.q);
+    const qs = params.toString();
+    return request<{ users: ManagedUser[]; pagination: ListMeta; counts: UserRoleCounts }>(`/users${qs ? `?${qs}` : ''}`);
   },
 
   /** Buat akun baru — hanya admin. */

@@ -12,8 +12,8 @@ export const ROLE_LABEL: Record<UserRole, string> = {
 };
 
 export const ROLE_DESC: Record<UserRole, string> = {
-  admin: "Kelola akun pengguna dan bisa melihat semua laporan.",
-  pelapor: "Buat laporan, edit selama masih menunggu, hapus laporan sendiri.",
+  admin: "Kelola akun dan lihat semua laporan.",
+  pelapor: "Buat laporan, ubah atau hapus yang masih menunggu.",
   approver: "Setujui atau tolak laporan yang masuk.",
 };
 
@@ -70,6 +70,20 @@ export interface StatusHistory {
   changed_at: string;
   decided_by: number | null;
   decided_by_name: string | null;
+}
+
+export interface UserListQuery {
+  page: number;
+  limit: number;
+  role?: UserRole;
+  q: string;
+}
+
+export interface UserRoleCounts {
+  all: number;
+  admin: number;
+  approver: number;
+  pelapor: number;
 }
 
 export interface ListMeta {

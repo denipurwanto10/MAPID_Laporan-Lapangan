@@ -20,12 +20,12 @@ const TODAY = new Intl.DateTimeFormat("id-ID", {
 
 export function PageHeader({ onAdd, pending, failed = false, onReviewPending }: PageHeaderProps) {
   const description = failed
-    ? "Data laporan belum bisa ditampilkan."
+    ? "Laporan gagal dimuat."
     : pending === null
       ? "Memuat laporan…"
       : pending > 0
-        ? `${pending} laporan menunggu keputusan.`
-        : "Tidak ada laporan yang menunggu keputusan.";
+        ? `${pending} laporan menunggu.`
+        : "Tidak ada laporan yang menunggu.";
   const hasPending = !failed && pending !== null && pending > 0;
   return (
     <div className="fade-up flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
@@ -43,7 +43,7 @@ export function PageHeader({ onAdd, pending, failed = false, onReviewPending }: 
               onClick={onReviewPending}
               className="inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-85"
             >
-              Tinjau sekarang
+              Lihat semua
               <ArrowRight aria-hidden="true" className="size-3.5" />
             </button>
           )}

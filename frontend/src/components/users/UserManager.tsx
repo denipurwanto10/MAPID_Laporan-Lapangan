@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Eye,
@@ -32,6 +32,8 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { ConfirmDialog } from "../reports/ConfirmDialog";
+import { Pagination } from "../reports/Pagination";
+import { PageSizeSelect } from "../reports/PageSizeSelect";
 import { ApiError, api } from "../../lib/api";
 import { formatTanggalPendek } from "../../lib/format";
 import { cn } from "../../lib/utils";
@@ -44,6 +46,8 @@ import {
   USER_ROLES,
   USERNAME_MAX,
   type ManagedUser,
+  type PageSize,
+  type UserListQuery,
   type UserRole,
 } from "../../types/report";
 
@@ -139,6 +143,11 @@ export function UserManager() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState<PageSize>(5);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [counts, setCounts] = useState({ all: 0, admin: 0, approver: 0, pelapor: 0 });
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -150,13 +159,23 @@ export function UserManager() {
     setLoading(true);
     setLoadError(null);
     try {
-      setUsers(await api.listUsers());
+      const q: Partial<UserListQuery> = {
+        page,
+        limit,
+        role: roleFilter === "all" ? undefined : roleFilter,
+        q: query.trim() || undefined,
+      };
+      const res = await api.listUsers(q);
+      setUsers(res.users);
+      setTotal(res.pagination.total);
+      setTotalPages(res.pagination.totalPages);
+      setCounts(res.counts);
     } catch (e) {
       setLoadError(e instanceof ApiError ? e.message : "Gagal memuat daftar akun.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit, roleFilter, query]);
 
   // Muat hanya bila memang admin: endpoint /api/users membalas 403 untuk peran lain
   // dan akan memunculkan toast error yang membingungkan.
@@ -165,18 +184,12 @@ export function UserManager() {
     if (isAdmin) void load();
   }, [isAdmin, load]);
 
-  const counts = useMemo(() => {
-    const c = { all: users.length, admin: 0, approver: 0, pelapor: 0 };
-    for (const u of users) c[u.role] += 1;
-    return c;
-  }, [users]);
+  // Reset ke halaman 1 saat filter/query berubah
+  useEffect(() => {
+    if (page !== 1) setPage(1);
+  }, [query, roleFilter, limit]);
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return users.filter(
-      (u) => (roleFilter === "all" || u.role === roleFilter) && (q === "" || u.username.toLowerCase().includes(q)),
-    );
-  }, [users, query, roleFilter]);
+  const visible = users;
 
   function openCreate(): void {
     setFormError(null);
@@ -261,7 +274,7 @@ export function UserManager() {
             </p>
             <h1 className="font-display text-[clamp(2rem,1.4rem+2.4vw,3rem)] leading-none">Kelola akun</h1>
             <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-              Akun dibuat di sini oleh admin — tidak ada pendaftaran mandiri. Peran bisa diubah kapan saja.
+              Buat akun baru di sini. Tidak ada pendaftaran mandiri; peran bisa diubah kapan saja.
             </p>
           </div>
           <Button
@@ -370,7 +383,7 @@ export function UserManager() {
                           active ? "text-foreground/70 md:bg-muted" : "text-muted-foreground md:bg-background/70",
                         )}
                       >
-                        {counts[value]}
+                        {counts[value] ?? 0}
                       </span>
                     </button>
                   );
@@ -595,10 +608,22 @@ export function UserManager() {
             )}
 
             {users.length > 0 && (
-              <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground max-md:rounded-3xl max-md:border max-md:border-border max-md:bg-card max-md:px-4 max-md:py-3 md:border-t md:border-border md:bg-muted/20 md:px-5 md:py-3.5">
-                <p className="tabular-nums" aria-live="polite">
-                  {visible.length} dari {users.length} akun
-                </p>
+              <div className="flex flex-col items-center gap-3 max-md:rounded-3xl max-md:border max-md:border-border max-md:bg-card max-md:px-4 max-md:py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:border-t md:border-border md:bg-muted/20 md:px-5 md:py-3.5">
+                <div className="flex items-center gap-3">
+                  <p className="tabular-nums text-xs text-muted-foreground" aria-live="polite">
+                    Menampilkan {users.length} dari {total} akun
+                  </p>
+                  <PageSizeSelect
+                    value={limit}
+                    onChange={(v) => { setLimit(v); setPage(1); }}
+                    aria-label="Baris per halaman"
+                  />
+                </div>
+                <Pagination
+                  meta={{ total, page, limit, totalPages }}
+                  onPage={setPage}
+                  aria-label="Halaman akun"
+                />
                 {loading && <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />}
               </div>
             )}

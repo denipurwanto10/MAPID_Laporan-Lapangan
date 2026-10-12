@@ -16,6 +16,8 @@ import {
 import {
   bulkUpdateReportStatus,
   countReports,
+  countUsers,
+  countUsersByRole,
   createReport,
   deleteReport,
   getHistory,
@@ -30,6 +32,7 @@ import {
 import {
   parseListQuery,
   parseReportId,
+  parseUserListQuery,
   validateBulkStatusChange,
   validateChangePassword,
   validateCreateReport,
@@ -133,10 +136,33 @@ export function createApp(db: DbQuery, options: AppOptions = {}): Express {
 
   // ---------- Manajemen akun (hanya admin) ----------
 
-  app.get('/api/users', auth, requireAdmin, asyncHandler(async (_req, res) => {
-    const users = await listUsers(db);
-    res.json({ success: true, data: users });
-  }));
+  app.get(
+    '/api/users',
+    auth,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
+      const q = parseUserListQuery(req.query);
+      const [users, total, counts] = await Promise.all([
+        listUsers(db, q),
+        countUsers(db, q),
+        countUsersByRole(db, q),
+      ]);
+      const totalPages = Math.max(1, Math.ceil(total / q.limit));
+      res.json({
+        success: true,
+        data: {
+          users,
+          pagination: {
+            page: q.page,
+            limit: q.limit,
+            total,
+            totalPages,
+          },
+          counts,
+        },
+      });
+    }),
+  );
 
   app.post(
     '/api/users',

@@ -154,7 +154,7 @@ export function Profile() {
     try {
       await api.changePassword(current, next);
       // Sesi sudah dicabut server — tinggal keluarkan ke layar login.
-      toast.success("Password berhasil diganti. Silakan masuk lagi.");
+      toast.success("Password diganti. Masuk lagi.");
       await logout();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Gagal mengganti password. Coba lagi.");
@@ -175,7 +175,7 @@ export function Profile() {
           </p>
           <h1 className="font-display text-[clamp(2rem,1.4rem+2.4vw,3rem)] leading-none">Profil saya</h1>
           <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-            Lihat info akun dan ganti password tanpa perlu bantuan admin.
+            Info akun dan ganti password.
           </p>
         </div>
 
@@ -227,7 +227,7 @@ export function Profile() {
           <div>
             <h2 className="font-display text-xl sm:text-2xl">Ganti password</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              Setelah diganti, semua sesi aktif (termasuk perangkat ini) akan dikeluarkan.
+              Semua sesi aktif akan keluar setelah password diganti.
             </p>
           </div>
           <div className="flex items-start gap-2.5 rounded-2xl border border-border bg-muted/40 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
@@ -235,7 +235,7 @@ export function Profile() {
             <p>
               {user.role === "admin"
                 ? "Password lama yang salah akan ditolak."
-                : "Password lama yang salah akan ditolak. Kalau lupa, hubungi admin untuk reset password."}
+                : "Kalau lupa password lama, minta reset ke admin."}
             </p>
           </div>
         </div>
