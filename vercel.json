@@ -1,5 +1,14 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "other",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite"
+  "outputDirectory": "frontend/dist",
+  "installCommand": "npm install",
+  "trailingSlash": false,
+  "functions": {
+    "api/[[...path]].ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
 }

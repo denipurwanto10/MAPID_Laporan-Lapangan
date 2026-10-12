@@ -27,26 +27,21 @@ export interface ExportResult {
 }
 
 /**
- * Unduh Excel (.xlsx) dari Supabase Edge Function — satu request, satu file.
- * Workbook disusun di server (supabase/functions/export-xlsx), frontend hanya mengunduh.
+ * Unduh Excel (.xlsx) langsung dari Express — GET /api/reports/export.xlsx.
+ * Workbook disusun di server dengan exceljs (backend/src/exportXlsx.ts),
+ * frontend hanya mengunduh (satu request, satu file).
  */
 export async function exportReports(params: ExportParams): Promise<ExportResult> {
   const search = new URLSearchParams();
   if (params.status !== "all") search.set("status", params.status);
   if (params.q.trim()) search.set("q", params.q.trim());
   if (params.order === "oldest") search.set("order", "asc");
-  // Offset zona waktu agar jam di Excel sama seperti sebelumnya (dibuat di client).
+  // Offset zona waktu agar jam di Excel sama seperti di layar pengguna.
   search.set("tz", String(new Date().getTimezoneOffset()));
 
-  const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-xlsx?${search.toString()}`;
   let res: Response;
   try {
-    res = await fetch(fnUrl, {
-      headers: {
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-    });
+    res = await fetch(`/api/reports/export.xlsx?${search.toString()}`);
   } catch {
     throw new ApiError(0, "Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.");
   }
