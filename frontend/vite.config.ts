@@ -1,5 +1,5 @@
-import path from "node:path";
-import tailwindcss from "@tailwindcss/vite";
+import path from "node:path"
+import tailwindcss from "@tailwindcss/vite"
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
@@ -9,6 +9,22 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('@radix-ui')) return 'vendor-radix'
+            if (id.includes('lucide-react')) return 'vendor-lucide'
+            if (id.includes('sonner')) return 'vendor-sonner'
+            if (id.includes('tailwind-merge') || id.includes('clsx') || id.includes('class-variance-authority') || id.includes('tw-animate-css')) return 'vendor-tailwind'
+            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) return 'vendor-react'
+          }
+          return undefined
+        },
+      },
     },
   },
   // Di produksi frontend & API satu domain (Vercel), jadi /api relatif sudah benar.

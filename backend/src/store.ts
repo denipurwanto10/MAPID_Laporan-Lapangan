@@ -296,9 +296,9 @@ export async function updateReportStatus(
     throw new AppError(404, 'Laporan tidak ditemukan');
   }
   if (prev.status === status) {
-    throw new AppError(409, `Laporan ini sudah berstatus ${prev.status}, jadi tidak bisa diubah lagi`);
+    throw new AppError(409, `Laporan ini sudah berstatus ${prev.status}`);
   }
-  throw new AppError(409, 'Laporan ini sudah diproses, jadi tidak bisa diubah lagi');
+  throw new AppError(409, 'Keputusan laporan ini baru saja berubah. Muat ulang lalu coba lagi.');
 }
 
 /**
@@ -359,7 +359,7 @@ export async function updateReport(
   }
   assertMayTouch(prev, user, 'mengubah');
   if (prev.status !== 'pending') {
-    throw new AppError(409, 'Laporan ini sudah diproses, jadi tidak bisa diubah lagi');
+    throw new AppError(409, 'Isi laporan terkunci setelah ada keputusan. Keputusan masih bisa direvisi.');
   }
   // Atomik seperti updateReportStatus: cek + tulis dalam satu query.
   const result = await db.query(
@@ -370,7 +370,7 @@ export async function updateReport(
   );
   const updated = result.rows[0] as Report | undefined;
   if (!updated) {
-    throw new AppError(409, 'Laporan ini sudah diproses, jadi tidak bisa diubah lagi');
+    throw new AppError(409, 'Isi laporan terkunci setelah ada keputusan. Keputusan masih bisa direvisi.');
   }
   return updated;
 }
@@ -389,7 +389,7 @@ export async function deleteReport(db: DbQuery, id: number, user: AuthUser): Pro
   }
   assertMayTouch(prev, user, 'menghapus');
   if (prev.status !== 'pending') {
-    throw new AppError(409, 'Laporan ini sudah diproses, jadi tidak bisa dihapus lagi');
+    throw new AppError(409, 'Laporan hanya bisa dihapus selama menunggu keputusan.');
   }
 
   const result = await db.query(
@@ -409,9 +409,9 @@ export async function deleteReport(db: DbQuery, id: number, user: AuthUser): Pro
   );
   const left = (countRes.rows[0] as { c: number } | undefined)?.c ?? 0;
   if (left <= 1) {
-    throw new AppError(409, 'Ini laporan menunggu terakhir Anda, jadi tidak bisa dihapus');
+    throw new AppError(409, 'Ini satu-satunya laporan menunggu Anda, jadi tidak bisa dihapus.');
   }
-  throw new AppError(409, 'Laporan ini sudah diproses, jadi tidak bisa dihapus lagi');
+  throw new AppError(409, 'Laporan hanya bisa dihapus selama menunggu keputusan.');
 }
 
 /** Jejak perubahan status satu laporan, terbaru dulu, lengkap dengan aktor. */

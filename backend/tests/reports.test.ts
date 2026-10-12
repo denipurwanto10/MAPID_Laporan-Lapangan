@@ -1145,7 +1145,7 @@ describe('menghapus laporan', () => {
       assert.equal(only.status, 201);
       const blocked = await asUser(`/api/reports/${only.body.data.id}`, { method: 'DELETE' });
       assert.equal(blocked.status, 409);
-      assert.match(blocked.body.message, /terakhir/i);
+      assert.match(blocked.body.message, /satu-satunya/i);
 
       // Dengan 2 baris pending, hapus satu boleh; sisa 1 tetap terkunci.
       const second = await asUser('/api/reports', {

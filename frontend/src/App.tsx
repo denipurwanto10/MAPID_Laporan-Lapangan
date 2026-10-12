@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useState, Suspense, lazy } from 'react'
 import { Toaster, toast } from 'sonner'
 import { AppShell } from './components/layout/AppShell'
 import { PageHeader } from './components/layout/PageHeader'
@@ -8,15 +8,11 @@ import { STATUS_LABEL } from './types/report'
 import { Pagination } from './components/reports/Pagination'
 import { PageSizeSelect } from './components/reports/PageSizeSelect'
 import { ReportCards } from './components/reports/ReportCards'
-import { ReportDetail } from './components/reports/ReportDetail'
-import { ReportDialog } from './components/reports/ReportDialog'
 import { ReportTable } from './components/reports/ReportTable'
 import { EmptySearchState, EmptyState, ErrorState, StatsSkeleton, TableSkeleton } from './components/reports/States'
 import { StatsStrip } from './components/reports/StatsStrip'
 import { Toolbar } from './components/reports/Toolbar'
 import { Login } from './components/auth/Login'
-import { UserManager } from './components/users/UserManager'
-import { Profile } from './components/profile/Profile'
 import { useAuth } from './context/AuthContext'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useReports } from './hooks/useReports'
@@ -24,6 +20,11 @@ import { useTheme } from './hooks/useTheme'
 import { ApiError } from './lib/api'
 import { exportReports } from './lib/export'
 import type { Report } from './types/report'
+
+const UserManager = lazy(() => import('./components/users/UserManager').then(m => ({ default: m.UserManager })))
+const Profile = lazy(() => import('./components/profile/Profile').then(m => ({ default: m.Profile })))
+const ReportDetail = lazy(() => import('./components/reports/ReportDetail').then(m => ({ default: m.ReportDetail })))
+const ReportDialog = lazy(() => import('./components/reports/ReportDialog').then(m => ({ default: m.ReportDialog })))
 
 type Tab = 'laporan' | 'akun' | 'profil'
 
@@ -210,9 +211,13 @@ function App() {
     >
       <main className="page-gutter mx-auto flex w-full max-w-[1400px] flex-col gap-5 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:gap-6 sm:py-8 sm:pb-8 lg:gap-6 lg:pt-3 lg:pb-8 2xl:max-w-[1560px]">
         {activeTab === 'akun' && isAdmin ? (
-          <UserManager />
+          <Suspense fallback={<div aria-busy="true" className="flex h-32 items-center justify-center text-muted-foreground">Memuat kelola akun…</div>}>
+            <UserManager />
+          </Suspense>
         ) : activeTab === 'profil' ? (
-          <Profile />
+          <Suspense fallback={<div aria-busy="true" className="flex h-32 items-center justify-center text-muted-foreground">Memuat profil…</div>}>
+            <Profile />
+          </Suspense>
         ) : (
         <>
         <section aria-label="Ringkasan" className="flex flex-col gap-5 rounded-[1.75rem] border border-border bg-card p-4 shadow-card sm:gap-6 sm:rounded-[2rem] sm:p-6 lg:p-8">
@@ -338,6 +343,7 @@ function App() {
         )}
       </main>
 
+      <Suspense fallback={null}>
       <ReportDetail
         report={selected}
         onClose={() => setSelectedId(null)}
@@ -374,6 +380,7 @@ function App() {
         submitLabel="Simpan perubahan"
         submittingLabel="Menyimpan..."
       />
+    </Suspense>
       {confirm && (
         <ConfirmDialog
           open
@@ -391,9 +398,9 @@ function App() {
             confirm.kind === 'bulk'
               ? `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Yang sudah diputuskan akan dilewati.`
               : confirm.kind === 'approve'
-                ? `Laporan "${confirm.report.nama}" akan disetujui. Tidak bisa diubah lagi.`
+                ? `Laporan "${confirm.report.nama}" akan disetujui. Keputusan masih bisa direvisi nanti.`
                 : confirm.kind === 'reject'
-                  ? `Laporan "${confirm.report.nama}" akan ditolak. Tidak bisa diubah lagi.`
+                  ? `Laporan "${confirm.report.nama}" akan ditolak. Keputusan masih bisa direvisi nanti.`
                   : `Laporan "${confirm.report.nama}" akan dihapus permanen dan tidak bisa dikembalikan.`
           }
           confirmLabel={

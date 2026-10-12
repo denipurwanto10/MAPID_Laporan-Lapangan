@@ -91,7 +91,7 @@ export function RowActions({
               "inline-flex items-center gap-1.5 text-xs text-muted-foreground",
               full && "mr-auto",
             )}
-            title="Laporan yang sudah diputuskan tidak bisa diubah"
+            title="Keputusan masih bisa direvisi"
           >
             <Lock aria-hidden="true" className="size-3.5" />
             <span className={cn(!full && "sr-only @3xl:not-sr-only")}>Sudah diputuskan</span>

@@ -299,7 +299,7 @@ export function useReports(user: AuthUser | null) {
           );
         }
         if (skipped.length > 0) {
-          toast.warning(`${skipped.length} laporan dilewati: sudah diputuskan atau tidak ada.`);
+          toast.warning(`${skipped.length} laporan dilewati: sudah ada keputusan atau tidak ditemukan.`);
         }
         setSelectedIds([]);
       } catch (e) {
