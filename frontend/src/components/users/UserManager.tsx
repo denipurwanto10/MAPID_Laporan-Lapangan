@@ -274,7 +274,7 @@ export function UserManager() {
             </p>
             <h1 className="font-display text-[clamp(2rem,1.4rem+2.4vw,3rem)] leading-none">Kelola akun</h1>
             <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-              Akun dibuat di sini, tidak ada pendaftaran sendiri. Peran bisa diubah kapan saja.
+              Buat akun baru di sini. Tidak ada pendaftaran mandiri; peran bisa diubah kapan saja.
             </p>
           </div>
           <Button
@@ -608,23 +608,27 @@ export function UserManager() {
             )}
 
             {users.length > 0 && (
-              <div className="flex flex-col items-center gap-3 max-md:rounded-3xl max-md:border max-md:border-border max-md:bg-card max-md:px-4 max-md:py-3 md:flex-row md:items-center md:justify-between md:gap-4 md:border-t md:border-border md:bg-muted/20 md:px-5 md:py-3.5">
-                <div className="flex items-center gap-3">
-                  <p className="tabular-nums text-xs text-muted-foreground" aria-live="polite">
+              <div className="flex flex-col gap-3 max-md:rounded-3xl max-md:border max-md:border-border max-md:bg-card max-md:p-3 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-x-4 md:gap-y-3 md:border-t md:border-border md:bg-muted/20 md:px-5 md:py-3.5">
+                <div className="flex items-center justify-between gap-3 max-md:px-1 md:contents">
+                  <p className="tabular-nums md:order-1" aria-live="polite">
                     Menampilkan {users.length} dari {total} akun
                   </p>
-                  <PageSizeSelect
-                    value={limit}
-                    onChange={(v) => { setLimit(v); setPage(1); }}
-                    aria-label="Baris per halaman"
+                  <div className="md:order-3">
+                    <PageSizeSelect
+                      value={limit}
+                      onChange={(v) => { setLimit(v); setPage(1); }}
+                      aria-label="Baris per halaman"
+                    />
+                  </div>
+                </div>
+                <div className="md:order-2 md:flex-1 md:max-w-xl">
+                  <Pagination
+                    meta={{ total, page, limit, totalPages }}
+                    onPage={setPage}
+                    aria-label="Halaman akun"
                   />
                 </div>
-                <Pagination
-                  meta={{ total, page, limit, totalPages }}
-                  onPage={setPage}
-                  aria-label="Halaman akun"
-                />
-                {loading && <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />}
+                {loading && <Loader2 aria-hidden="true" className="size-3.5 animate-spin md:order-4 md:ml-auto" />}
               </div>
             )}
           </>
