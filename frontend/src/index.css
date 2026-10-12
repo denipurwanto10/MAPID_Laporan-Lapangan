@@ -239,7 +239,49 @@
     background: color-mix(in srgb, var(--background) 94%, transparent);
   }
 
-  /* Garis kilau tipis di tepi atas kartu utama. */
+  /* Permukaan kartu premium: gradasi halus + kilau tipis di tepi atas + bayangan berlapis. */
+  .surface {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--border);
+    background:
+      radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--brass) 9%, transparent), transparent 55%),
+      linear-gradient(160deg, var(--card), color-mix(in srgb, var(--accent) 38%, var(--card)));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.55),
+      0 1px 2px rgb(13 31 32 / 0.05),
+      0 8px 24px -14px rgb(13 31 32 / 0.18);
+    transition:
+      transform 200ms ease,
+      box-shadow 200ms ease,
+      border-color 200ms ease;
+  }
+  .dark .surface {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 1px 2px rgb(0 0 0 / 0.4),
+      0 10px 28px -14px rgb(0 0 0 / 0.7);
+  }
+  @media (hover: hover) {
+    .surface-lift:hover {
+      transform: translateY(-2px);
+      border-color: color-mix(in srgb, var(--brass) 45%, var(--border));
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.55),
+        0 2px 4px rgb(13 31 32 / 0.06),
+        0 18px 36px -16px rgb(13 31 32 / 0.28);
+    }
+    .dark .surface-lift:hover {
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.08),
+        0 18px 40px -16px rgb(0 0 0 / 0.85);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .surface-lift:hover {
+      transform: none;
+    }
+  }
 }
 
 @media (max-width: 639px) {

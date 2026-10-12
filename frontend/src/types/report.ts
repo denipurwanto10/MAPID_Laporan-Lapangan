@@ -86,7 +86,7 @@ export const STATUS_LABEL: Record<ReportStatus, string> = {
 };
 
 /** Jumlah baris per halaman daftar laporan (default). */
-export const PAGE_SIZE = 10;
+export const PAGE_SIZE = 5;
 /** Pilihan jumlah baris per halaman yang bisa dipilih pengguna. */
 export const PAGE_SIZE_OPTIONS = [5, 10, 15, 25, 50] as const;
 export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
@@ -97,4 +97,4 @@ export const DESKRIPSI_MAX = 2000;
 /** Batas panjang username & password, sama dengan validasi backend. */
 export const USERNAME_MAX = 50;
 export const PASSWORD_MIN = 8;
-export const PASSWORD_MAX = 72;
+export const PASSWORD_MAX = 128;

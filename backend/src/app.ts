@@ -15,6 +15,7 @@ import {
 } from './exportXlsx';
 import {
   bulkUpdateReportStatus,
+  countReports,
   createReport,
   deleteReport,
   getHistory,
@@ -220,14 +221,20 @@ export function createApp(db: DbQuery, options: AppOptions = {}): Express {
     asyncHandler(async (req, res) => {
       const q = parseListQuery(req.query);
       const user = req.user!;
-      const [{ items, total }, summary] = await Promise.all([
-        listReports(db, q, user),
+      const total = await countReports(db, q, user);
+      // Halaman di luar jangkauan (mis. akibat filter/hapus) dikembalikan ke
+      // halaman terakhir yang benar-benar ada, supaya daftar tidak kosong.
+      const totalPages = Math.max(1, Math.ceil(total / q.limit));
+      const page = Math.min(q.page, totalPages);
+      const requests = [
+        listReports(db, { ...q, page }, user),
         getSummary(db, q, user),
-      ]);
+      ];
+      const [items, summary] = await Promise.all(requests);
       res.json({
         success: true,
         data: items,
-        meta: { total, page: q.page, limit: q.limit, totalPages: Math.max(1, Math.ceil(total / q.limit)) },
+        meta: { total, page, limit: q.limit, totalPages },
         summary,
       });
     }),

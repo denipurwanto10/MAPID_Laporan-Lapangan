@@ -50,7 +50,7 @@ export function RowActions({
   const approving = busy && action?.kind === "approve";
   const rejecting = busy && action?.kind === "reject";
   const pending = status === "pending";
-  const btnSize = full ? "h-11 flex-1" : "h-8";
+  const btnSize = full ? "h-11 flex-1" : "h-8 @max-3xl:w-8 @max-3xl:px-0";
   // Pelapor tidak punya tombol keputusan; barisnya hanya berisi Ubah/Hapus.
   const showDecider = pending && canDecide;
   const hasMenu = pending && (canEdit || canDelete);
@@ -69,7 +69,7 @@ export function RowActions({
             className={btnSize}
           >
             {approving ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Check aria-hidden="true" />}
-            Setujui
+            <span className={cn(!full && "sr-only @3xl:not-sr-only")}>Setujui</span>
           </Button>
           <Button
             type="button"
@@ -81,7 +81,7 @@ export function RowActions({
             className={btnSize}
           >
             {rejecting ? <Loader2 aria-hidden="true" className="animate-spin" /> : <X aria-hidden="true" />}
-            Tolak
+            <span className={cn(!full && "sr-only @3xl:not-sr-only")}>Tolak</span>
           </Button>
         </>
       ) : (
@@ -94,7 +94,7 @@ export function RowActions({
             title="Laporan yang sudah diputuskan tidak dapat diubah"
           >
             <Lock aria-hidden="true" className="size-3.5" />
-            Sudah diputuskan
+            <span className={cn(!full && "sr-only @3xl:not-sr-only")}>Sudah diputuskan</span>
           </span>
         )
       )}

@@ -81,7 +81,10 @@ function createFakeDb() {
       const id = filterParams[pi++] as number;
       out = out.filter((r) => r.reporter_id === id);
     }
-    if (text.includes('status = $')) {
+    // Ringkasan (GROUP BY status) sengaja tanpa filter status, jadi angka per
+    // status tetap bisa dibandingkan — samakan dengan perilaku store.ts.
+    const wantsStatus = text.includes('status = $') && !text.includes('GROUP BY');
+    if (wantsStatus) {
       const status = filterParams[pi++] as string;
       out = out.filter((r) => r.status === status);
     }
@@ -728,6 +731,39 @@ describe('mengambil daftar laporan', () => {
   it('limit raksasa dijepit ke batas aman', async () => {
     const { body } = await api('/api/reports?limit=9999');
     assert.ok(body.meta.limit <= 100);
+  });
+
+  it('halaman di luar jangkauan diklem ke halaman terakhir', async () => {
+    const { body } = await api('/api/reports?page=999&limit=1');
+    const total = body.meta.total as number;
+    assert.ok(total > 0, 'fixture harus punya minimal satu laporan');
+    // OFFSET di luar jangkauan selalu kosong; server harus mengarahkan ke
+    // halaman terakhir yang benar-benar ada, bukan mengembalikan daftar kosong.
+    assert.equal(body.meta.page, body.meta.totalPages);
+    assert.equal(body.data.length, Math.min(1, total));
+  });
+
+  it('ringkasan tidak dijernihkan filter status aktif', async () => {
+    // Jamin ada laporan approved: buat lalu putuskan sebagai approver.
+    const created = await api('/api/reports', {
+      method: 'POST',
+      body: JSON.stringify({ nama: 'Untuk summary approve', deskripsi: 'd' }),
+    });
+    const createdId = created.body.data.id as number;
+    await api(`/api/reports/${createdId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'approved' }),
+    });
+    // Saat tab "pending" aktif, angka status lain harus tetap terisi supaya
+    // bisa dibandingkan.
+    const pending = await api('/api/reports?status=pending');
+    const all = await api('/api/reports');
+    const allSummary = all.body.summary as { all: number; approved: number; pending: number };
+    const pendingSummary = pending.body.summary as { all: number; approved: number; pending: number };
+    assert.ok(allSummary.approved > 0);
+    assert.equal(pendingSummary.all, allSummary.all);
+    assert.equal(pendingSummary.approved, allSummary.approved);
+    assert.equal(pending.body.meta.total, pendingSummary.pending);
   });
 
   it('filter status hanya mengembalikan status tersebut', async () => {

@@ -38,11 +38,12 @@ export function ReportTable({ reports, total, page, limit, action, query, select
   const allChecked = pendingIds.length > 0 && pendingIds.every((id) => selectedIds.includes(id));
   const someChecked = !allChecked && pendingIds.some((id) => selectedIds.includes(id));
   return (
-    <div className="hidden md:block">
-      <Table className="table-fixed">
+    <div className="@container hidden md:block">
+      <Table>
         <caption className="sr-only">Daftar laporan lapangan</caption>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            {canDecide && (
             <TableHead scope="col" className="w-12 text-center">
               <input
                 type="checkbox"
@@ -56,17 +57,19 @@ export function ReportTable({ reports, total, page, limit, action, query, select
                 className="size-4 cursor-pointer accent-primary"
               />
             </TableHead>
-            <TableHead scope="col" className="w-14 text-center tabular-nums">No</TableHead>
-            <TableHead scope="col" className="xl:w-[24%]">Laporan</TableHead>
-            <TableHead scope="col" className="hidden xl:table-cell">Deskripsi</TableHead>
-            <TableHead scope="col" className="hidden w-28 xl:table-cell">Dibuat</TableHead>
-            <TableHead scope="col" className="w-32">Status</TableHead>
-            <TableHead scope="col" className="w-64 text-right xl:w-72">Aksi</TableHead>
+            )}
+            <TableHead scope="col" className="hidden w-14 text-center tabular-nums @5xl:table-cell">No</TableHead>
+            <TableHead scope="col" className="min-w-0 @5xl:w-[28%]">Laporan</TableHead>
+            <TableHead scope="col" className="hidden @5xl:table-cell">Deskripsi</TableHead>
+            <TableHead scope="col" className="hidden w-32 @5xl:table-cell">Dibuat</TableHead>
+            <TableHead scope="col" className="w-[1%] whitespace-nowrap">Status</TableHead>
+            <TableHead scope="col" className="w-[1%] whitespace-nowrap text-right">Aksi</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {reports.map((report, index) => (
             <TableRow key={report.id} data-state={selectedIds.includes(report.id) ? "selected" : undefined} onClick={() => onOpen(report)} className="cursor-pointer">
+              {canDecide && (
               <TableCell className="text-center align-middle" onClick={(e) => e.stopPropagation()}>
                 {report.status === "pending" && canDecide ? (
                   <input
@@ -78,7 +81,8 @@ export function ReportTable({ reports, total, page, limit, action, query, select
                   />
                 ) : null}
               </TableCell>
-              <TableCell className="text-center align-middle text-xs font-medium text-muted-foreground tabular-nums">
+              )}
+              <TableCell className="hidden text-center align-middle text-xs font-medium text-muted-foreground tabular-nums @5xl:table-cell">
                 {(page - 1) * limit + index + 1}
               </TableCell>
               <TableCell className="align-middle">
@@ -93,19 +97,19 @@ export function ReportTable({ reports, total, page, limit, action, query, select
                 >
                   {highlightText(report.nama, query)}
                 </button>
-                <p className="mt-1 line-clamp-2 text-muted-foreground [overflow-wrap:anywhere] xl:hidden">
+                <p className="mt-1 line-clamp-2 text-muted-foreground [overflow-wrap:anywhere] @5xl:hidden">
                   {highlightText(report.deskripsi, query)}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground tabular-nums xl:hidden">
+                <p className="mt-1 text-xs text-muted-foreground tabular-nums @5xl:hidden">
                   {formatTanggalPendek(report.created_at)}
                 </p>
               </TableCell>
-              <TableCell className="hidden align-middle xl:table-cell">
+              <TableCell className="hidden align-middle @5xl:table-cell">
                 <p title={report.deskripsi} className="line-clamp-2 text-muted-foreground [overflow-wrap:anywhere]">
                   {highlightText(report.deskripsi, query)}
                 </p>
               </TableCell>
-              <TableCell className="hidden align-middle whitespace-nowrap text-muted-foreground tabular-nums xl:table-cell">
+              <TableCell className="hidden align-middle whitespace-nowrap text-muted-foreground tabular-nums @5xl:table-cell">
                 <time dateTime={report.created_at} title={formatTanggal(report.created_at)}>
                   {formatTanggalPendek(report.created_at)}
                 </time>

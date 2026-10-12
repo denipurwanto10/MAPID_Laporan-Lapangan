@@ -42,8 +42,16 @@ async function findById(db: DbQuery, id: number): Promise<Report | undefined> {
 /**
  * Cakupan akses. Pelapor SELALU dibatasi ke laporan miliknya — nilai query
  * `mine` tidak bisa membuka scope ini. Admin dan approver melihat seluruh laporan.
+ *
+ * `ignoreStatus` dipakai ringkasan: jumlah per status harus tetap bisa
+ * dibandingkan satu sama lain, jadi tab status yang sedang aktif tidak boleh
+ * membuat angka status lain jadi nol.
  */
-function scopeClause(q: ListQuery, user: AuthUser): { text: string; params: unknown[] } {
+function scopeClause(
+  q: ListQuery,
+  user: AuthUser,
+  opts: { ignoreStatus?: boolean } = {},
+): { text: string; params: unknown[] } {
   const conds: string[] = [];
   const params: unknown[] = [];
 
@@ -51,7 +59,7 @@ function scopeClause(q: ListQuery, user: AuthUser): { text: string; params: unkn
     params.push(user.id);
     conds.push(`r.reporter_id = $${params.length}`);
   }
-  if (q.status) {
+  if (q.status && !opts.ignoreStatus) {
     params.push(q.status);
     conds.push(`r.status = $${params.length}::report_status`);
   }
@@ -65,17 +73,26 @@ function scopeClause(q: ListQuery, user: AuthUser): { text: string; params: unkn
   return { text: conds.length ? `WHERE ${conds.join(' AND ')}` : '', params };
 }
 
+/**
+ * Jumlah baris yang cocok dengan filter + cakupan akses user.
+ * Dipisah dari listReports supaya route bisa meng-klem nomor halaman ke jangkauan
+ * nyata sebelum menghitung OFFSET.
+ */
+export async function countReports(db: DbQuery, q: ListQuery, user: AuthUser): Promise<number> {
+  const { text: where, params } = scopeClause(q, user);
+  const res = await db.query(`SELECT COUNT(*)::int AS total FROM reports r ${where}`, [...params]);
+  return (res.rows[0] as { total: number } | undefined)?.total ?? 0;
+}
+
 export async function listReports(
   db: DbQuery,
   q: ListQuery,
   user: AuthUser,
-): Promise<{ items: Report[]; total: number }> {
+): Promise<Report[]> {
   const { text: where, params } = scopeClause(q, user);
-  const countRes = await db.query(`SELECT COUNT(*)::int AS total FROM reports r ${where}`, [
-    ...params,
-  ]);
-  const total = (countRes.rows[0] as { total: number } | undefined)?.total ?? 0;
   // Kolom & arah sort dari whitelist parseListQuery — aman dari injeksi SQL.
+  // `r.id` memakai arah yang sama dengan kolom utama supaya baris dengan
+  // created_at identik tidak bergeser antar halaman (pagination stabil).
   const col = q.sort === 'updated_at' ? 'updated_at' : 'created_at';
   const dir = q.order === 'asc' ? 'ASC' : 'DESC';
   const offset = (q.page - 1) * q.limit;
@@ -84,11 +101,11 @@ export async function listReports(
        FROM reports r
        JOIN users u ON u.id = r.reporter_id
        ${where}
-       ORDER BY r.${col} ${dir}, r.id DESC
+       ORDER BY r.${col} ${dir}, r.id ${dir}
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, q.limit, offset],
   );
-  return { items: listRes.rows as Report[], total };
+  return listRes.rows as Report[];
 }
 
 /** Ambil semua baris sesuai filter untuk ekspor (satu query, dibatasi maxRows). */
@@ -106,7 +123,7 @@ export async function listAllForExport(
        FROM reports r
        JOIN users u ON u.id = r.reporter_id
        ${where}
-       ORDER BY r.${col} ${dir}, r.id DESC
+       ORDER BY r.${col} ${dir}, r.id ${dir}
        LIMIT $${params.length + 1}`,
     [...params, maxRows + 1],
   );
@@ -114,13 +131,14 @@ export async function listAllForExport(
   return { rows: all.slice(0, maxRows), truncated: all.length > maxRows };
 }
 
-/** Ringkasan jumlah per status — mengikuti cakupan akses yang sama dengan daftar. */
+/** Ringkasan jumlah per status — mengikuti cakupan akses yang sama dengan daftar.
+ * ignoreStatus=true agar angka per status dihitung tanpa memfilter status aktif. */
 export async function getSummary(
   db: DbQuery,
   q: Pick<ListQuery, 'status' | 'q'>,
   user: AuthUser,
 ): Promise<ReportSummary> {
-  const { text: where, params } = scopeClause(q as ListQuery, user);
+  const { text: where, params } = scopeClause(q as ListQuery, user, { ignoreStatus: true });
   const res = await db.query(
     `SELECT r.status, COUNT(*)::int AS count FROM reports r ${where} GROUP BY r.status`,
     [...params],
