@@ -6,8 +6,12 @@ export interface DbQuery {
 }
 
 export function createPool(connectionString: string): Pool {
+  // Supabase Session Pooler memakai sertifikat self-signed — pg menolaknya
+  // bila verifikasi penuh. Lokal (localhost) tidak butuh SSL sama sekali.
+  const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
   const pool = new Pool({
     connectionString,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
     // max: 1 untuk Vercel serverless (tiap instance satu koneksi; default 10
     // akan menghabiskan kuota Postgres Supabase). Lokal/dev juga cukup satu.
     max: 1,
