@@ -14,6 +14,15 @@ Aplikasi web untuk mengelola laporan lapangan — **Express.js (TypeScript) + Po
 
 Lihat **[ARCHITECTURE.md](./ARCHITECTURE.md)** untuk pemetaan 1:1 endpoint study case → implementasi.
 
+## Output
+
+Hasil yang dikumpulkan sesuai ketentuan pengerjaan:
+
+- **Repository**: https://github.com/denipurwanto10/MAPID_Laporan-Lapangan (berisi `backend/` Express + `frontend/` React)
+- **Aplikasi online**: https://mapid-reports.vercel.app
+  - API: https://mapid-reports.vercel.app/api/health · https://mapid-reports.vercel.app/api/reports
+- **Cara menjalankan**: lihat [1](#1-database-supabase-3-menit) (database), [2](#2-backend-express-lokal) (backend), [3](#3-frontend-lokal) (frontend) di bawah.
+
 ## Fitur
 
 - Buat laporan (nama + deskripsi, status otomatis `pending`)
@@ -54,13 +63,6 @@ npm install
 npm run dev            # http://localhost:5173 (butuh backend di :3001 agar /api tersedia)
 npm run build && npm run lint && npm test
 ```
-
-## Output
-
-- **Link repository**: https://github.com/denipurwanto10/MAPID_Laporan-Lapangan
-- **Aplikasi online (live)**: https://mapid-reports.vercel.app
-  - API: https://mapid-reports.vercel.app/api/health · https://mapid-reports.vercel.app/api/reports
-- **Cara menjalankan**: lihat section [2](#2-backend-express-lokal) dan [3](#3-frontend-lokal) di bawah.
 
 ## 4. Deploy (Vercel)
 
