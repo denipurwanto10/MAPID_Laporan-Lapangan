@@ -11,4 +11,16 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Di produksi frontend & API satu domain (Vercel), jadi /api relatif sudah benar.
+  // Saat `npm run dev` frontend jalan di :5173 tapi Express ada di :3001 —
+  // tanpa proxy di bawah, fetch("/api/...") akan mendarat di :5173 dan gagal.
+  // Proxy meneruskan /api ke backend lokal tanpa mengubah kode frontend.
+  server: {
+    proxy: {
+      "/api": {
+        target: process.env.VITE_PROXY_TARGET ?? "http://localhost:3001",
+        changeOrigin: true,
+      },
+    },
+  },
 })

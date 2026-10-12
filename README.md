@@ -146,7 +146,7 @@ npm install
 npm run dev               # http://localhost:5173
 ```
 
-> Frontend otomatis memanggil API di `/api`. Untuk dev lokal, Vercel tidak ada di depan — gunakan proxy Vite atau jalankan backend di `:3001`.
+> Frontend otomatis memanggil API di `/api`: di produksi Vercel ini satu domain dengan backend, sedangkan di `npm run dev` Vite meneruskan `/api` ke backend lokal di `:3001` via `server.proxy` di `vite.config.ts` (target bisa diubah lewat `VITE_PROXY_TARGET`).
 
 **Verifikasi:**
 
