@@ -212,38 +212,50 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
             </SheetBody>
 
             <SheetFooter>
-              {canDecideThis ? (
+              {pending ? (
                 <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button type="button" variant="approve" className="h-11" disabled={busy} onClick={() => onApprove(shown)}>
-                      <Check aria-hidden="true" />
-                      Setujui
-                    </Button>
-                    <Button type="button" variant="reject" className="h-11" disabled={busy} onClick={() => onReject(shown)}>
-                      <X aria-hidden="true" />
-                      Tolak
-                    </Button>
-                  </div>
-                  {(canEditThis) && (
-                    <Button type="button" variant="outline" className="h-11 flex-1" disabled={busy} onClick={() => onEdit(shown)}>
-                      <Pencil aria-hidden="true" />
-                      Ubah
-                    </Button>
+                  {canDecideThis && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button type="button" variant="approve" className="h-11" disabled={busy} onClick={() => onApprove(shown)}>
+                        <Check aria-hidden="true" />
+                        Setujui
+                      </Button>
+                      <Button type="button" variant="reject" className="h-11" disabled={busy} onClick={() => onReject(shown)}>
+                        <X aria-hidden="true" />
+                        Tolak
+                      </Button>
+                    </div>
                   )}
-                  {canDeleteThis && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-11 flex-1 text-destructive hover:text-destructive"
-                      disabled={busy}
-                      onClick={() => onDelete(shown)}
-                    >
-                      <Trash2 aria-hidden="true" />
-                      Hapus
-                    </Button>
+                  {(canEditThis || canDeleteThis) && (
+                    <div className="flex gap-2">
+                      {canEditThis && (
+                        <Button type="button" variant="outline" className="h-11 flex-1" disabled={busy} onClick={() => onEdit(shown)}>
+                          <Pencil aria-hidden="true" />
+                          Ubah
+                        </Button>
+                      )}
+                      {canDeleteThis && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-11 flex-1 text-destructive hover:text-destructive"
+                          disabled={busy}
+                          onClick={() => onDelete(shown)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                          Hapus
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {!canDecideThis && !canEditThis && !canDeleteThis && (
+                    <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
+                      <Lock aria-hidden="true" className="size-4 shrink-0" />
+                      Keputusan hanya bisa dilakukan Admin atau Approver.
+                    </p>
                   )}
                 </>
-              ) : !pending && canUndo ? (
+              ) : canUndo ? (
                 <div className="grid grid-cols-2 gap-2">
                   <Button type="button" variant="approve" className="h-11" disabled={busy} onClick={() => onApprove(shown)}>
                     <Check aria-hidden="true" />
@@ -257,7 +269,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
               ) : (
                 <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
                   <Lock aria-hidden="true" className="size-4 shrink-0" />
-                  {pending ? "Keputusan hanya bisa dilakukan Admin atau Approver." : "Laporan yang sudah diputuskan tidak dapat diubah."}
+                  Laporan yang sudah diputuskan tidak dapat diubah.
                 </p>
               )}
             </SheetFooter>
