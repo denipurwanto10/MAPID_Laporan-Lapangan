@@ -52,8 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await api.logout();
-    setUser(null);
+    try {
+      await api.logout();
+    } catch {
+      // Token bisa saja sudah tidak berlaku di server (mis. habis ganti password).
+      // Keluar harus tetap berhasil dari sisi pengguna, jadi error diabaikan.
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   const value = useMemo(

@@ -16,6 +16,7 @@ import { StatsStrip } from './components/reports/StatsStrip'
 import { Toolbar } from './components/reports/Toolbar'
 import { Login } from './components/auth/Login'
 import { UserManager } from './components/users/UserManager'
+import { Profile } from './components/profile/Profile'
 import { useAuth } from './context/AuthContext'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useReports } from './hooks/useReports'
@@ -24,9 +25,22 @@ import { ApiError } from './lib/api'
 import { exportReports } from './lib/export'
 import type { Report } from './types/report'
 
+type Tab = 'laporan' | 'akun' | 'profil'
+
 function App() {
   const { user, checking } = useAuth()
-  const [tab, setTab] = useState<'laporan' | 'akun'>('laporan')
+  const userId = user?.id ?? null
+  // Tab disimpan berpasangan dengan userId supaya otomatis kembali ke "laporan"
+  // setiap identitas pengguna berganti — login ulang akun yang sama, pindah akun,
+  // maupun setelah logout. Reset terjadi saat render (pola resmi React), bukan di
+  // useEffect: kalau lewat efek, halaman tab lama sempat tampil satu frame dulu.
+  const [tabState, setTabState] = useState<{ userId: number | null; tab: Tab }>({
+    userId,
+    tab: 'laporan',
+  })
+  if (tabState.userId !== userId) setTabState({ userId, tab: 'laporan' })
+  const tab = tabState.userId === userId ? tabState.tab : 'laporan'
+  const setTab = (next: Tab) => setTabState({ userId, tab: next })
   const {
     reports,
     summary,
@@ -76,8 +90,8 @@ function App() {
   const canDecide = isAdmin || user?.role === 'approver'
   const currentUserId = user?.id ?? -1
 
-  // Tab "Kelola akun" hanya untuk Admin; kalau bukan admin, paksa kembali ke daftar laporan.
-  const activeTab = isAdmin ? tab : 'laporan'
+  // Tab "Kelola akun" hanya untuk Admin; "profil" boleh semua peran.
+  const activeTab = isAdmin ? tab : tab === 'profil' ? 'profil' : 'laporan'
 
   // Pindah halaman lewat sidebar: mulai dari atas halaman.
   useEffect(() => {
@@ -197,6 +211,8 @@ function App() {
       <main className="page-gutter mx-auto flex w-full max-w-[1400px] flex-col gap-5 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:gap-6 sm:py-8 sm:pb-8 lg:gap-6 lg:pt-3 lg:pb-8 2xl:max-w-[1560px]">
         {activeTab === 'akun' && isAdmin ? (
           <UserManager />
+        ) : activeTab === 'profil' ? (
+          <Profile />
         ) : (
         <>
         <section aria-label="Ringkasan" className="flex flex-col gap-5 rounded-[1.75rem] border border-border bg-card p-4 shadow-card sm:gap-6 sm:rounded-[2rem] sm:p-6 lg:p-8">

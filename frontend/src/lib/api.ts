@@ -229,6 +229,24 @@ export const api = {
     }
   },
 
+  /**
+   * Ganti password sendiri. Server mencabut SELURUH sesi milik user setelah
+   * berhasil, jadi pemanggil wajib mengeluarkan user ke halaman login.
+   *
+   * Sengaja TIDAK memakai request(): helper itu membuang token pada setiap 401,
+   * sedangkan di sini 401 berarti "password lama salah" — kesalahan input, bukan
+   * sesi mati. Token hanya dibuang bila penggantian benar-benar berhasil.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/auth/password`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!res.ok) throw await toApiError(res, "Gagal mengganti password");
+    setToken(null);
+  },
+
   /* -------------------------------------------------------------- users -- */
 
   /** Daftar akun — hanya admin. */

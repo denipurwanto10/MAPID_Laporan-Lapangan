@@ -211,6 +211,25 @@ export function validateUpdateUser(
   return out;
 }
 
+/** Validasi body PATCH /api/auth/password — ganti password sendiri. */
+export function validateChangePassword(body: unknown): { currentPassword: string; newPassword: string } {
+  if (!isRecord(body)) {
+    throw new AppError(400, 'Body request harus berupa JSON object');
+  }
+  const currentPassword = typeof body.currentPassword === 'string' ? body.currentPassword : '';
+  const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
+
+  if (!currentPassword) throw new AppError(400, 'Password lama wajib diisi');
+  if (!newPassword) throw new AppError(400, 'Password baru wajib diisi');
+  validatePasswordStrength(newPassword);
+
+  if (currentPassword === newPassword) {
+    throw new AppError(400, 'Password baru harus berbeda dari password lama');
+  }
+
+  return { currentPassword, newPassword };
+}
+
 /**
  * Tolak password lemah. Panjang minimum 8 plus minimal satu huruf dan satu
  * angka — cukup untuk akun demo internal tanpa menyulitkan pengguna.

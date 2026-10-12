@@ -188,6 +188,10 @@ function createFakeDb() {
         const u = users.find((x) => x.id === params[0]);
         return { rows: u ? [{ id: u.id, role: u.role }] : [] };
       }
+      if (text.startsWith('SELECT password_hash FROM users WHERE id')) {
+        const u = users.find((x) => x.id === params[0]);
+        return { rows: u ? [{ password_hash: u.password_hash }] : [] };
+      }
       if (text.startsWith("SELECT COUNT(*)::int AS c FROM users WHERE role = 'admin'")) {
         return { rows: [{ c: users.filter((u) => u.role === 'admin').length }] };
       }
@@ -419,7 +423,9 @@ let pelaporToken = '';
 let approverToken = '';
 
 before(async () => {
-  const app = createApp(createFakeDb(), { createLimitMax: 500 });
+  // authLimitMax dinaikkan: suite ini login berkali-kali dari IP 127.0.0.1 dan
+  // kini juga menguji PATCH /api/auth/password yang memakai authLimiter yang sama.
+  const app = createApp(createFakeDb(), { createLimitMax: 500, authLimitMax: 500 });
   await new Promise<void>((resolve) => {
     server = app.listen(0, '127.0.0.1', () => resolve());
   });
@@ -1412,6 +1418,91 @@ describe('bulk approve/reject', () => {
       body: JSON.stringify({ ids: [id], status: 'pending' }),
     });
     assert.equal(status, 400);
+  });
+});
+
+describe('ganti password sendiri', () => {
+  // Akun khusus agar tidak mengubah password akun demo yang dipakai test lain.
+  const USER = 'gantipw';
+  const OLD = 'lama12345';
+  const NEW = 'baru67890';
+
+  async function loginAs(username: string, password: string): Promise<{ status: number; token?: string }> {
+    const r = await api('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    });
+    return { status: r.status, token: r.body.data?.token };
+  }
+
+  it('setup: admin membuat akun uji', async () => {
+    const { status } = await api('/api/users', {
+      method: 'POST',
+      body: JSON.stringify({ username: USER, password: OLD, role: 'approver' }),
+    });
+    assert.equal(status, 201);
+  });
+
+  it('tanpa login ditolak 401', async () => {
+    const res = await fetch(`${baseUrl}/api/auth/password`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ currentPassword: OLD, newPassword: NEW }),
+    });
+    assert.equal(res.status, 401);
+  });
+
+  it('password lama salah ditolak 401 dan password tidak berubah', async () => {
+    const token = (await loginAs(USER, OLD)).token!;
+    const { status } = await api('/api/auth/password', {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword: 'salah99', newPassword: NEW }),
+    });
+    assert.equal(status, 401);
+    // Sesi tetap hidup — salah input password lama tidak boleh menendang user.
+    const me = await api('/api/auth/me', { headers: { authorization: `Bearer ${token}` } });
+    assert.equal(me.status, 200);
+  });
+
+  it('password baru lemah ditolak 400', async () => {
+    const token = (await loginAs(USER, OLD)).token!;
+    const { status } = await api('/api/auth/password', {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword: OLD, newPassword: 'pendek' }),
+    });
+    assert.equal(status, 400);
+  });
+
+  it('password baru sama dengan lama ditolak 400', async () => {
+    const token = (await loginAs(USER, OLD)).token!;
+    const { status } = await api('/api/auth/password', {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currentPassword: OLD, newPassword: OLD }),
+    });
+    assert.equal(status, 400);
+  });
+
+  it('berhasil: 200, semua sesi dicabut, password lama mati, password baru hidup', async () => {
+    const tokenA = (await loginAs(USER, OLD)).token!;
+    const tokenB = (await loginAs(USER, OLD)).token!;
+    const { status, body } = await api('/api/auth/password', {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${tokenA}` },
+      body: JSON.stringify({ currentPassword: OLD, newPassword: NEW }),
+    });
+    assert.equal(status, 200);
+    assert.equal(body.success, true);
+
+    // Kedua sesi (termasuk yang dipakai untuk request) harus tidak berlaku.
+    for (const t of [tokenA, tokenB]) {
+      const me = await api('/api/auth/me', { headers: { authorization: `Bearer ${t}` } });
+      assert.equal(me.status, 401);
+    }
+    assert.equal((await loginAs(USER, OLD)).status, 401);
+    assert.equal((await loginAs(USER, NEW)).status, 200);
   });
 });
 

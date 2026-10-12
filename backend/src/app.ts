@@ -2,7 +2,7 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { AppError, asyncHandler, errorHandler, notFoundHandler } from './errors';
-import { authenticate, createSession, hashPassword, revokeSession, revokeUserSessions } from './auth';
+import { authenticate, createSession, hashPassword, revokeSession, revokeUserSessions, verifyPassword } from './auth';
 import { requireAdmin, requireAuth, requireDecider, requireReporter } from './authMiddleware';
 import { createRateLimiter } from './rateLimit';
 import type { DbQuery } from './db';
@@ -31,6 +31,7 @@ import {
   parseListQuery,
   parseReportId,
   validateBulkStatusChange,
+  validateChangePassword,
   validateCreateReport,
   validateCreateUser,
   validateLogin,
@@ -101,6 +102,32 @@ export function createApp(db: DbQuery, options: AppOptions = {}): Express {
     auth,
     asyncHandler(async (req, res) => {
       res.json({ success: true, data: req.user });
+    }),
+  );
+
+  // Ganti password sendiri (butuh login, verifikasi password lama).
+  // authLimiter dipakai di sini karena endpoint ini memverifikasi kredensial —
+  // tanpa rate limit, password lama bisa ditebak berulang kali dari sesi yang sah.
+  app.patch(
+    '/api/auth/password',
+    auth,
+    authLimiter,
+    asyncHandler(async (req, res) => {
+      const { currentPassword, newPassword } = validateChangePassword(req.body);
+      const row = await db.query(
+        `SELECT password_hash FROM users WHERE id = $1`,
+        [req.user!.id],
+      );
+      const hash = (row.rows[0] as { password_hash: string } | undefined)?.password_hash;
+      if (!hash || hash === '!disabled' || !verifyPassword(currentPassword, hash)) {
+        throw new AppError(401, 'Password lama tidak cocok');
+      }
+      await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [
+        hashPassword(newPassword),
+        req.user!.id,
+      ]);
+      await revokeUserSessions(db, req.user!.id);
+      res.json({ success: true, data: { ok: true } });
     }),
   );
 

@@ -10,8 +10,8 @@ import { cn } from "../../lib/utils";
 
 export type ConnectionState = "checking" | "online" | "offline";
 
-/** Halaman yang tersedia di navigasi samping. "akun" hanya untuk Admin. */
-export type AppView = "laporan" | "akun";
+/** Halaman yang tersedia di navigasi samping. "akun" hanya untuk Admin, "profil" untuk semua peran. */
+export type AppView = "laporan" | "akun" | "profil";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -70,92 +70,144 @@ function NavLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+interface NavItemProps {
+  id: AppView;
+  label: string;
+  hint: string;
+  Icon: typeof FileText;
+  active: boolean;
+  onNavigate: (view: AppView) => void;
+  badge?: number | null;
+}
+
+/** Satu menu. Komponen tingkat atas (bukan fungsi di dalam SidebarBody) agar tidak di-mount ulang tiap render. */
+function NavItem({ id, label, hint, Icon, active, onNavigate, badge }: NavItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigate(id)}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-2xl p-1.5 pr-3 text-left transition-colors focus-visible:outline-offset-0",
+        active ? "bg-primary text-primary-foreground shadow-card" : "text-foreground hover:bg-muted",
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+          active ? "bg-primary-foreground/15" : "bg-muted text-muted-foreground group-hover:bg-card",
+        )}
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col leading-tight">
+        <span className="truncate text-sm font-semibold">{label}</span>
+        <span className={cn("truncate text-xs", active ? "text-primary-foreground/70" : "text-muted-foreground")}>
+          {hint}
+        </span>
+      </span>
+      {badge != null && badge > 0 && (
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
+            active ? "bg-primary-foreground/15" : "bg-pending text-pending-foreground",
+          )}
+          title={`${badge} laporan menunggu`}
+        >
+          {badge > 99 ? "99+" : badge}
+          <span className="sr-only"> laporan menunggu</span>
+        </span>
+      )}
+    </button>
+  );
+}
+
 /** Isi sidebar — dipakai bersama oleh sidebar desktop dan drawer mobile agar selalu sama. */
 function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connection, compact = false }: SidebarBodyProps) {
   const conn = CONNECTION[connection];
   const { user, logout } = useAuth();
   const isAdmin = user?.role === "admin";
-
-  function NavItem({ id, label, hint, Icon }: { id: AppView; label: string; hint: string; Icon: typeof FileText }) {
-    const active = view === id;
-    return (
-      <button
-        type="button"
-        onClick={() => onNavigate(id)}
-        aria-current={active ? "page" : undefined}
-        className={cn(
-          "group flex w-full cursor-pointer items-center gap-3 rounded-2xl p-1.5 pr-3 text-left transition-colors",
-          active ? "bg-primary text-primary-foreground shadow-card" : "text-foreground hover:bg-muted",
-        )}
-      >
-        <span
-          aria-hidden="true"
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors",
-            active ? "bg-primary-foreground/15" : "bg-muted text-muted-foreground group-hover:bg-card",
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col leading-tight">
-          <span className="truncate text-sm font-semibold">{label}</span>
-          <span className={cn("truncate text-xs", active ? "text-primary-foreground/70" : "text-muted-foreground")}>
-            {hint}
-          </span>
-        </span>
-        {id === "laporan" && pending !== null && pending > 0 && (
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums",
-              active ? "bg-primary-foreground/15" : "bg-pending text-pending-foreground",
-            )}
-            title={`${pending} laporan menunggu`}
-          >
-            {pending}
-            <span className="sr-only"> laporan menunggu</span>
-          </span>
-        )}
-      </button>
-    );
-  }
+  const profileActive = view === "profil";
 
   return (
     <>
       <div className={cn("flex shrink-0 items-center border-b border-border/70", compact ? "h-16 px-4" : "h-20 px-5 xl:px-6")}>
         <Brand compact={compact} />
       </div>
-      <nav aria-label="Navigasi utama" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pt-5">
+      <nav aria-label="Navigasi utama" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pt-5 pb-3">
         <NavLabel>Menu utama</NavLabel>
-        {NavItem({ id: "laporan", label: "Laporan", hint: "Tinjau laporan", Icon: FileText })}
+        <NavItem
+          id="laporan"
+          label="Laporan"
+          hint="Tinjau laporan"
+          Icon={FileText}
+          active={view === "laporan"}
+          onNavigate={onNavigate}
+          badge={pending}
+        />
         {isAdmin && (
           <>
             <div className="pt-4">
               <NavLabel>Administrasi</NavLabel>
             </div>
-            {NavItem({ id: "akun", label: "Kelola akun", hint: "Pengguna & peran", Icon: Users })}
+            <NavItem
+              id="akun"
+              label="Kelola akun"
+              hint="Pengguna & peran"
+              Icon={Users}
+              active={view === "akun"}
+              onNavigate={onNavigate}
+            />
           </>
         )}
       </nav>
-      <div className="flex shrink-0 flex-col gap-2 p-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 p-2 pr-1.5">
-          <span
-            aria-hidden="true"
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground uppercase"
+      <div className="flex shrink-0 flex-col gap-2 border-t border-border/70 p-3">
+        <div
+          className={cn(
+            "flex items-center gap-1 rounded-2xl border p-1.5 transition-colors",
+            profileActive ? "border-primary bg-primary text-primary-foreground shadow-card" : "border-border bg-muted/40",
+          )}
+        >
+          <button
+            type="button"
+            onClick={() => onNavigate("profil")}
+            aria-current={profileActive ? "page" : undefined}
+            aria-label={`Profil saya (${user?.username ?? "—"})`}
+            className={cn(
+              "flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl p-0.5 text-left transition-colors focus-visible:outline-offset-0",
+              !profileActive && "hover:bg-muted",
+            )}
           >
-            {(user?.username ?? "?").slice(0, 2)}
-          </span>
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-sm font-semibold">{user?.username ?? "—"}</p>
-            <p className="truncate text-xs text-muted-foreground">{user ? ROLE_LABEL[user.role] : ""}</p>
-          </div>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "flex size-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold uppercase",
+                profileActive ? "bg-primary-foreground/15 text-primary-foreground" : "bg-primary text-primary-foreground",
+              )}
+            >
+              {(user?.username ?? "?").slice(0, 2)}
+            </span>
+            <span className="min-w-0 flex-1 leading-tight">
+              <span className="block truncate text-sm font-semibold">{user?.username ?? "—"}</span>
+              <span className={cn("block truncate text-xs", profileActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                {user ? ROLE_LABEL[user.role] : ""} · Profil saya
+              </span>
+            </span>
+          </button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Keluar"
+            aria-label="Keluar dari akun"
             title="Keluar"
             onClick={() => void logout()}
-            className="shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
+            className={cn(
+              "size-10 shrink-0 rounded-xl",
+              profileActive
+                ? "text-primary-foreground hover:bg-primary-foreground/15 hover:text-primary-foreground"
+                : "text-muted-foreground hover:bg-rejected hover:text-rejected-foreground",
+            )}
           >
             <LogOut aria-hidden="true" className="size-4" />
           </Button>
@@ -195,10 +247,10 @@ export function AppShell({ children, theme, onToggleTheme, connection, pending, 
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <a
-        href="#daftar-laporan"
+        href="#konten-utama"
         className="sr-only z-[60] rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
-        Lewati ke daftar laporan
+        Lewati ke konten
       </a>
       <div className="flex min-h-dvh w-full items-stretch">
         <aside className="sticky top-3 m-3 mr-0 hidden h-[calc(100dvh-1.5rem)] w-64 shrink-0 flex-col self-start overflow-hidden rounded-3xl border border-border bg-card shadow-card lg:flex xl:w-72">
@@ -256,7 +308,9 @@ export function AppShell({ children, theme, onToggleTheme, connection, pending, 
               <ThemeToggle theme={theme} onToggle={onToggleTheme} className="size-10 shrink-0 rounded-xl border border-border bg-muted hover:bg-accent" />
             </div>
           </header>
-          {children}
+          <div id="konten-utama" tabIndex={-1} className="outline-none">
+            {children}
+          </div>
         </div>
       </div>
 

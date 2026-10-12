@@ -166,8 +166,32 @@ export function useReports(user: AuthUser | null) {
   /* ----- Muat ulang saat identitas berubah (login baru / user lain) ---- */
   // Lapisan server memfilter daftar per peran (Pelapor hanya miliknya), jadi daftar
   // wajib di-refetch begitu user berganti agar tidak menampilkan data sesi sebelumnya.
+  const lastUserIdRef = useRef<number | null>(null);
+  // true bila sejak pemuatan terakhir sudah lewat keadaan "tamu" (logout / token mati).
+  const needsFreshStartRef = useRef(false);
   useEffect(() => {
-    if (user) void load("silent");
+    if (!user) {
+      // Keluar: login berikutnya — akun sama maupun berbeda — harus mulai bersih.
+      needsFreshStartRef.current = true;
+      return;
+    }
+    const prev = lastUserIdRef.current;
+    lastUserIdRef.current = user.id;
+    // Pergantian sesi = sebelumnya ada akun, lalu logout, lalu masuk lagi (akun apa pun),
+    // atau langsung pindah akun. Muat pertama/refresh (prev null) BUKAN pergantian:
+    // filter dari URL dibiarkan utuh supaya tautan yang dibagikan tetap berfungsi.
+    const accountChanged = prev !== null && (needsFreshStartRef.current || prev !== user.id);
+    needsFreshStartRef.current = false;
+    if (accountChanged) {
+      setSelectedIds([]);
+      setAction(null);
+      // Bersihkan filter akun sebelumnya, lalu muat dari URL yang sudah netral.
+      window.history.replaceState(null, "", window.location.pathname);
+      void load("initial");
+      return;
+    }
+    // Muat pertama/refresh: data awal sudah ditangani efek mount, cukup disegarkan.
+    void load("silent");
   }, [user, load]);
 
   /* ----- Refresh otomatis tiap 15 detik + saat tab kembali terlihat ----- */
