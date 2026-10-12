@@ -115,18 +115,9 @@ export async function updateReportStatus(
     }
     throw new AppError(409, 'Laporan ini sudah Disetujui atau Ditolak, jadi tidak bisa diubah lagi');
   }
-  // Jejak audit: catat perpindahan status. Kegagalan di sini tidak menggagalkan
-  // update utama — tabel history mungkin belum dimigrasi di database lama.
-  // console.warn agar hilang audit tetap ketahuan di log, bukan lenyap diam-diam.
-  try {
-    await db.query(
-      `INSERT INTO report_status_history (report_id, from_status, to_status)
-       VALUES ($1, 'pending'::report_status, $2::report_status)`,
-      [id, status],
-    );
-  } catch (err) {
-    console.warn(`Gagal mencatat riwayat status laporan ${id}:`, err);
-  }
+  // Jejak audit dicatat trigger DB trg_status_change (AFTER UPDATE), bukan
+  // INSERT dari sini — dengan begitu semua jalur tulis (Express, PostgREST,
+  // Edge Function, psql) menghasilkan tepat satu baris riwayat.
   return updated;
 }
 
@@ -149,18 +140,8 @@ export async function bulkUpdateReportStatus(
   );
   const updated = result.rows as Report[];
   const updatedById = new Map(updated.map((r) => [r.id, r]));
-  // Catat audit untuk tiap baris yang berubah; kegagalan audit tidak menggagalkan bulk.
-  for (const row of updated) {
-    try {
-      await db.query(
-        `INSERT INTO report_status_history (report_id, from_status, to_status)
-         VALUES ($1, 'pending'::report_status, $2::report_status)`,
-        [row.id, status],
-      );
-    } catch (err) {
-      console.warn(`Gagal mencatat riwayat status laporan ${row.id}:`, err);
-    }
-  }
+  // Jejak audit tiap baris yang berubah dicatat trigger DB trg_status_history
+  // (satu UPDATE = satu baris history, atomik di dalam statement yang sama).
   const skipped: { id: number; reason: string }[] = [];
   if (updatedById.size < uniqueIds.length) {
     // Baca ulang yang tidak berubah untuk bedakan 404 vs 409 tanpa N+1 query berlebihan

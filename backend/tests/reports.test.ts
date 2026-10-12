@@ -123,17 +123,31 @@ function createFakeDb() {
           const changed: Row[] = [];
           for (const r of rows) {
             if (!wanted.has(r.id) || r.status !== 'pending') continue;
+            const oldStatus = r.status;
             r.status = params[0] as string;
             r.updated_at = new Date().toISOString();
             changed.push({ ...r });
+            history.push({
+              report_id: r.id,
+              from_status: oldStatus,
+              to_status: r.status,
+              changed_at: new Date().toISOString(),
+            });
           }
           return { rows: changed };
         }
         const row = rows.find((r) => r.id === (params[1] as number));
         // WHERE status = 'pending': baris final tidak berubah (RETURNING kosong).
         if (!row || row.status !== 'pending') return { rows: [] };
+        const oldStatus = row.status;
         row.status = params[0] as string;
         row.updated_at = new Date().toISOString();
+        history.push({
+          report_id: row.id,
+          from_status: oldStatus,
+          to_status: row.status,
+          changed_at: new Date().toISOString(),
+        });
         return { rows: [{ ...row }] };
       }
       if (text.startsWith('UPDATE reports SET nama')) {

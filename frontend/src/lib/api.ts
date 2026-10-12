@@ -3,14 +3,12 @@ import type { ListMeta, Report, ReportSummary, SortOrder, StatusFilter, StatusHi
 /**
  * Klien API REST laporan lapangan.
  *
- * CRUD (list / create / get / update / status / delete / history) memakai
- * Express — backend/src/ — yang di-deploy sebagai Vercel serverless function di
- * path /api. Business rules (hanya pending yang boleh diubah, proteksi baris
- * terakhir, rate limit) ditegakkan di Express; RLS di PostgreSQL tetap menjadi
- * lapisan kedua.
- *
- * Bulk approve/reject memakai Supabase Edge Function (runtime Deno) karena
- * eksplisit butuh processing batch atomik di sisi server.
+ * Seluruh endpoint — CRUD, bulk, dan export Excel — dilayani Express
+ * (backend/src/) yang di-deploy sebagai Vercel serverless function di path /api.
+ * Business rules (hanya pending yang boleh diubah, proteksi baris terakhir,
+ * rate limit, validasi input) ditegakkan di Express; RLS di PostgreSQL menjadi
+ * lapisan kedua. Jejak audit perpindahan status dicatat trigger DB
+ * trg_status_history, jadi semua jalur tulis menghasilkan tepat satu entri.
  */
 
 /** Base path API — relatif agar frontend & backend satu origin (Vercel). */
@@ -144,26 +142,19 @@ export const api = {
 
   /**
    * Bulk approve/reject — satu request, atomik di database.
-   * Supabase Edge Function (Deno): butuh runtime Deno untuk batch atomik + RLS.
+   * Diproses Express (Vercel serverless) memakai query batch; audit status
+   * dicatat trigger DB trg_status_history — sama seperti jalur single status.
    */
   async bulkUpdateStatus(
     ids: number[],
     status: "approved" | "rejected",
   ): Promise<{ updated: Report[]; skipped: { id: number; reason: string }[] }> {
-    const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-status`;
-    const res = await fetch(fnUrl, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+    return request<{ updated: Report[]; skipped: { id: number; reason: string }[] }>(
+      "/reports/bulk-status",
+      {
+        method: "PATCH",
+        body: JSON.stringify({ ids, status }),
       },
-      body: JSON.stringify({ ids, status }),
-    });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => null)) as { error?: string } | null;
-      throw new ApiError(res.status, err?.error ?? "Bulk update gagal");
-    }
-    return (await res.json()) as { updated: Report[]; skipped: { id: number; reason: string }[] };
+    );
   },
 };
