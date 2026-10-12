@@ -55,6 +55,13 @@ npm run dev            # http://localhost:5173 (butuh backend di :3001 agar /api
 npm run build && npm run lint && npm test
 ```
 
+## Output
+
+- **Link repository**: https://github.com/denipurwanto10/MAPID_Laporan-Lapangan
+- **Aplikasi online (live)**: https://mapid-reports.vercel.app
+  - API: https://mapid-reports.vercel.app/api/health · https://mapid-reports.vercel.app/api/reports
+- **Cara menjalankan**: lihat section [2](#2-backend-express-lokal) dan [3](#3-frontend-lokal) di bawah.
+
 ## 4. Deploy (Vercel)
 
 Import repo → set **Secret** `DATABASE_URL` (Session pooler URI lengkap, Production + Preview + Development) → Deploy.
