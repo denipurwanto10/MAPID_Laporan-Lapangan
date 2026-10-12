@@ -1,71 +1,7 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-// Gunakan npm: specifier (Deno native) untuk SheetJS xlsx.
-// Catatan: registry npm publik SheetJS berhenti di 0.18.5; versi di atas itu
-// hanya tersedia via CDN (yang diblokir Edge Runtime), jadi pin 0.18.5.
-import * as XLSX from "npm:xlsx@0.18.5";
+// Penyusun workbook Excel untuk Laporan Lapangan — tampilan modern & profesional.
+import ExcelJS from "npm:exceljs@4.4.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Menunggu",
-  approved: "Disetujui",
-  rejected: "Ditolak",
-};
-
-const STATUS_STYLE: Record<string, { fill: string; font: string }> = {
-  pending: { fill: "FFF3D6", font: "8A4B00" },
-  approved: { fill: "DDF5E8", font: "0A6A40" },
-  rejected: { fill: "FDE2E2", font: "A81D1D" },
-};
-
-const EXPORT_ROW_MAX = 5000;
-
-function safeText(v: string): string {
-  return /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-}
-
-function formatDateForExcel(iso: string, tzMinutes: number): Date | null {
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return null;
-  return new Date(t - tzMinutes * 60000);
-}
-
-function filterLabel(ctx: ExportContext): string {
-  const statusPart =
-    ctx.status === "pending" || ctx.status === "approved" || ctx.status === "rejected"
-      ? `Status: ${STATUS_LABEL[ctx.status]}`
-      : "Semua status";
-  const parts = [statusPart];
-  if (ctx.q.trim()) parts.push(`Kata kunci: "${ctx.q.trim()}"`);
-  parts.push(ctx.order === "asc" ? "Urutan: terlama" : "Urutan: terbaru");
-  return parts.join("  ·  ");
-}
-
-function pad(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-function stamp(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function fmtDateTime(d: Date): string {
-  if (Number.isNaN(d.getTime())) return "";
-  return `${stamp(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-interface ExportContext {
-  status: string;
-  q: string;
-  order: string;
-  tzMinutes: number;
-}
-
-interface ReportRow {
+export interface ReportRow {
   id: number;
   nama: string;
   deskripsi: string;
@@ -74,206 +10,329 @@ interface ReportRow {
   updated_at: string;
 }
 
-serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+export interface BuildOptions {
+  rows: ReportRow[];
+  /** Filter yang dipakai, untuk ditampilkan di subjudul. */
+  statusFilter?: string; // "all" | pending | approved | rejected
+  query?: string;
+  order?: "asc" | "desc";
+  /** Offset zona waktu klien (Date.getTimezoneOffset, menit). */
+  tzOffset?: number;
+  truncated?: boolean;
+}
 
-  if (req.method !== "GET") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+// ── Palet warna (ARGB) ──────────────────────────────────────────────
+const C = {
+  navy: "FF0F2A4A",
+  navySoft: "FF1E3A5F",
+  accent: "FF2563EB",
+  ink: "FF1F2937",
+  muted: "FF6B7280",
+  line: "FFE5E7EB",
+  zebra: "FFF8FAFC",
+  white: "FFFFFFFF",
+  pendingBg: "FFFEF3C7", pendingFg: "FF92400E",
+  okBg: "FFD1FAE5", okFg: "FF065F46",
+  noBg: "FFFEE2E2", noFg: "FF991B1B",
+  cardBg: "FFF1F5F9",
+};
+const FONT = "Calibri";
+const STATUS_LABEL = { pending: "Menunggu", approved: "Disetujui", rejected: "Ditolak" } as const;
+const FILTER_LABEL: Record<string, string> = {
+  all: "Semua status", pending: "Menunggu", approved: "Disetujui", rejected: "Ditolak",
+};
 
-  const url = new URL(req.url);
-  const status = url.searchParams.get("status") || "all";
-  const q = url.searchParams.get("q") || "";
-  const order = url.searchParams.get("order") || "desc";
-  const tzMinutes = Number(url.searchParams.get("tz")) || 0;
+const solid = (argb: string): ExcelJS.Fill => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+const thin = (argb: string): Partial<ExcelJS.Border> => ({ style: "thin", color: { argb } });
 
-  // Teruskan token kiriman frontend. Edge Function sengaja TIDAK memakai
-  // service_role: seluruh aturan akses ditegakkan RLS, dan query di bawah
-  // hanya butuh hak baca (policy SELECT mengizinkan publik).
-  const auth = req.headers.get("Authorization") ?? "";
-  if (!auth) {
-    return new Response(JSON.stringify({ error: "Missing authorization" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-  const apikey = req.headers.get("apikey") ?? "";
+/** Date yang bila ditampilkan Excel (tanpa zona waktu) sama dengan jam lokal klien. */
+function localDate(iso: string, tz: number): Date | null {
+  const t = new Date(iso).getTime();
+  return Number.isNaN(t) ? null : new Date(t - tz * 60_000);
+}
 
-  // Build query
-  let query = `${Deno.env.get("SUPABASE_URL")}/rest/v1/reports?select=id,nama,deskripsi,status,created_at,updated_at`;
-  
-  if (status !== "all") {
-    query += `&status=eq.${status}`;
-  }
-  
-  if (q) {
-    // Use ILIKE with escaping (PostgREST uses * for wildcard)
-    const escaped = q.replace(/[%_]/g, (c) => `\\${c}`);
-    query += `&or=(nama.ilike.*${escaped}*,deskripsi.ilike.*${escaped}*)`;
-  }
-  
-  const sortCol = "created_at";
-  const sortDir = order === "asc" ? "asc" : "desc";
-  query += `&order=${sortCol}.${sortDir}&limit=${EXPORT_ROW_MAX + 1}`;
+export async function buildWorkbook(opts: BuildOptions): Promise<ArrayBuffer> {
+  const { rows, tzOffset = 0 } = opts;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Laporan Lapangan";
+  wb.created = new Date();
+  wb.title = "Laporan Lapangan";
 
-  const res = await fetch(query, {
-    headers: {
-      apikey,
-      "Authorization": auth,
+  const ws = wb.addWorksheet("Laporan", {
+    views: [{ showGridLines: false, state: "frozen", ySplit: 9, xSplit: 0 }],
+    properties: { tabColor: { argb: C.accent }, defaultRowHeight: 20 },
+    pageSetup: {
+      paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      margins: { left: 0.4, right: 0.4, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 },
+      horizontalCentered: true,
+    },
+    headerFooter: {
+      oddFooter: "&L&8Laporan Lapangan&C&8Halaman &P dari &N&R&8Dicetak &D",
     },
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    return new Response(JSON.stringify({ error: "Database query failed", detail: err }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const allRows: ReportRow[] = await res.json();
-  const truncated = allRows.length > EXPORT_ROW_MAX;
-  const rows = truncated ? allRows.slice(0, EXPORT_ROW_MAX) : allRows;
-
-  // Build workbook with SheetJS
-  const wb = XLSX.utils.book_new();
-  const ws_data: any[][] = [];
-
-  // Row 1: Title
-  ws_data.push(["Laporan Lapangan"]);
-  // Row 2: Subtitle
-  const ctx: ExportContext = { status, q, order, tzMinutes };
-  ws_data.push([`Diekspor ${fmtDateTime(new Date())}  ·  ${filterLabel(ctx)}`]);
-  // Rows 3-8: spacing
-  for (let i = 0; i < 6; i++) ws_data.push([]);
-
-  // Row 9: Summary cards (TOTAL, MENUNGGU, DISETUJUI, DITOLAK)
-  const stats = [
-    { label: "TOTAL", value: rows.length, fill: "0A0A0A", font: "FFFFFF" },
-    { label: "MENUNGGU", value: rows.filter((r) => r.status === "pending").length, fill: "FFF3D6", font: "8A4B00" },
-    { label: "DISETUJUI", value: rows.filter((r) => r.status === "approved").length, fill: "DDF5E8", font: "0A6A40" },
-    { label: "DITOLAK", value: rows.filter((r) => r.status === "rejected").length, fill: "FDE2E2", font: "A81D1D" },
+  // A=gutter, B..H = tabel, I=gutter
+  ws.columns = [
+    { width: 2 },   // A
+    { width: 6 },   // B No
+    { width: 8 },   // C ID
+    { width: 30 },  // D Nama
+    { width: 58 },  // E Deskripsi
+    { width: 14 },  // F Status
+    { width: 20 },  // G Dibuat
+    { width: 20 },  // H Diperbarui
+    { width: 2 },   // I
   ];
-  
-  const summaryRow = [];
-  for (let i = 0; i < stats.length; i++) {
-    summaryRow.push(stats[i].label);
-    summaryRow.push(""); // merged cell placeholder
+  const FIRST = 2, LAST = 8; // B..H
+
+  // ── Banner judul (baris 1–3) ─────────────────────────────────────
+  ws.getRow(1).height = 8;
+  ws.mergeCells("B2:H2");
+  ws.mergeCells("B3:H3");
+  ws.getRow(2).height = 36;
+  ws.getRow(3).height = 22;
+  const title = ws.getCell("B2");
+  title.value = "LAPORAN LAPANGAN";
+  title.font = { name: FONT, size: 22, bold: true, color: { argb: C.white } };
+  title.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  const filterTxt = FILTER_LABEL[opts.statusFilter ?? "all"] ?? "Semua status";
+  const parts = [
+    `Filter: ${filterTxt}`,
+    opts.query?.trim() ? `Pencarian: “${opts.query.trim()}”` : null,
+    `Urutan: ${opts.order === "asc" ? "Terlama dulu" : "Terbaru dulu"}`,
+  ].filter(Boolean);
+  const sub = ws.getCell("B3");
+  sub.value = parts.join("   •   ");
+  sub.font = { name: FONT, size: 10, color: { argb: "FFBFD3EE" } };
+  sub.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  for (let r = 2; r <= 3; r++) {
+    for (let c = FIRST; c <= LAST; c++) ws.getCell(r, c).fill = solid(C.navy);
   }
-  ws_data.push(summaryRow);
-  
-  const summaryValRow = [];
-  for (let i = 0; i < stats.length; i++) {
-    summaryValRow.push(stats[i].value);
-    summaryValRow.push("");
-  }
-  ws_data.push(summaryValRow);
-  
-  // Row 11: spacer
-  ws_data.push([]);
-  // Row 12: spacer
-  ws_data.push([]);
+  // aksen biru tipis di bawah banner
+  ws.getRow(4).height = 4;
+  for (let c = FIRST; c <= LAST; c++) ws.getCell(4, c).fill = solid(C.accent);
 
-  // Header row
-  const headerRow = ["No", "Nama Laporan", "Deskripsi", "Status", "Dibuat", "Diperbarui"];
-  ws_data.push(headerRow);
+  // ── Dimensi data tabel (butuh untuk rumus ringkasan) ─────────────
+  const HEADER_ROW = 9;
+  const DATA_START = HEADER_ROW + 1;
+  const DATA_END = DATA_START + Math.max(rows.length, 1) - 1;
+  const statusRange = `$F$${DATA_START}:$F$${DATA_END}`;
 
-  // Data rows
-  rows.forEach((r, i) => {
-    const created = formatDateForExcel(r.created_at, tzMinutes);
-    const updated = formatDateForExcel(r.updated_at, tzMinutes);
-    ws_data.push([
-      i + 1,
-      safeText(r.nama),
-      safeText(r.deskripsi),
-      STATUS_LABEL[r.status],
-      created ? fmtDateTime(created) : "",
-      updated ? fmtDateTime(updated) : "",
-    ]);
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-  // Set column widths
-  ws["!cols"] = [
-    { wch: 6 },
-    { wch: 38 },
-    { wch: 64 },
-    { wch: 15 },
-    { wch: 19 },
-    { wch: 19 },
+  // ── Kartu ringkasan (baris 6–7) ──────────────────────────────────
+  ws.getRow(5).height = 10;
+  ws.getRow(6).height = 18;
+  ws.getRow(7).height = 34;
+  ws.getRow(8).height = 12;
+  // 4 kartu: B:C, D, E, F:H  (dirapikan agar lebar kurang lebih seimbang)
+  const cards: { range: string; label: string; formula: string; fg: string; bg: string }[] = [
+    { range: "B", label: "TOTAL LAPORAN", formula: `=COUNTA($D$${DATA_START}:$D$${DATA_END})`, fg: C.navySoft, bg: C.cardBg },
+    { range: "D", label: "MENUNGGU", formula: `=COUNTIF(${statusRange},"Menunggu")`, fg: C.pendingFg, bg: C.pendingBg },
+    { range: "E", label: "DISETUJUI", formula: `=COUNTIF(${statusRange},"Disetujui")`, fg: C.okFg, bg: C.okBg },
+    { range: "F", label: "DITOLAK", formula: `=COUNTIF(${statusRange},"Ditolak")`, fg: C.noFg, bg: C.noBg },
   ];
-
-  // Apply styles using SheetJS cell styling
-  const HEADER_ROW = 9; // 0-indexed = row 10 in Excel (1-indexed)
-  const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-
-  // Style header row
-  for (let C = range.s.c; C <= range.e.c; C++) {
-    const cellAddr = XLSX.utils.encode_cell({ r: HEADER_ROW, c: C });
-    if (!ws[cellAddr]) continue;
-    ws[cellAddr].s = {
-      font: { name: "Calibri", bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "0A0A0A" } },
-      alignment: { vertical: "center", horizontal: C === 0 || C === 3 ? "center" : "left", indent: C === 0 || C === 3 ? 0 : 1 },
-      border: { bottom: { style: "thin", color: { rgb: "E4E4E7" } } },
-    };
+  ws.mergeCells("B6:C6"); ws.mergeCells("B7:C7");
+  ws.mergeCells("F6:H6"); ws.mergeCells("F7:H7");
+  for (const card of cards) {
+    const lab = ws.getCell(`${card.range}6`);
+    const val = ws.getCell(`${card.range}7`);
+    lab.value = card.label;
+    lab.font = { name: FONT, size: 9, bold: true, color: { argb: card.fg } };
+    lab.alignment = { vertical: "bottom", horizontal: "left", indent: 1 };
+    val.value = { formula: card.formula };
+    val.numFmt = "#,##0";
+    val.font = { name: FONT, size: 22, bold: true, color: { argb: card.fg } };
+    val.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
   }
-
-  // Style data rows
-  for (let R = HEADER_ROW + 1; R <= range.e.r; R++) {
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      const cellAddr = XLSX.utils.encode_cell({ r: R, c: C });
-      if (!ws[cellAddr]) continue;
-      
-      const rowData = ws_data[R];
-      const statusVal = rowData[3] as string; // Status column
-      const style = STATUS_STYLE[statusVal] || { fill: "FFFFFF", font: "0A0A0A" };
-      const zebra = (R - HEADER_ROW) % 2 === 0 ? "F7F7F8" : "FFFFFF";
-      
-      ws[cellAddr].s = {
-        font: { name: "Calibri", size: 10.5, color: { rgb: C === 0 ? "6B6B73" : "0A0A0A" }, bold: C === 1 },
-        fill: { fgColor: { rgb: C === 3 ? style.fill : zebra } },
-        alignment: { 
-          vertical: "center", 
-          horizontal: C === 0 || C === 3 || C === 4 || C === 5 ? "center" : "left",
-          wrapText: C === 1 || C === 2,
-          indent: C === 1 || C === 2 ? 1 : 0,
-        },
-        border: { bottom: { style: "thin", color: { rgb: "E4E4E7" } } },
-      };
-      
-      // Date format for columns 4 and 5 (0-indexed)
-      if (C === 4 || C === 5) {
-        ws[cellAddr].z = "dd mmm yyyy, hh:mm";
+  // isi warna kartu + celah putih antar kartu (kolom tidak dipisah, jadi pakai border putih)
+  const cardCols: [number, number, string][] = [[2, 3, C.cardBg], [4, 4, C.pendingBg], [5, 5, C.okBg], [6, 8, C.noBg]];
+  for (const [a, b, bg] of cardCols) {
+    for (let c = a; c <= b; c++) {
+      for (const r of [6, 7]) {
+        const cell = ws.getCell(r, c);
+        cell.fill = solid(bg);
+        cell.border = {
+          left: c === a ? { style: "thick", color: { argb: C.white } } : undefined,
+          right: c === b ? { style: "thick", color: { argb: C.white } } : undefined,
+          top: r === 6 ? { style: "medium", color: { argb: bg === C.cardBg ? C.navySoft : bg === C.pendingBg ? "FFF59E0B" : bg === C.okBg ? "FF10B981" : "FFEF4444" } } : undefined,
+        };
       }
     }
   }
 
-  // Auto filter
-  ws["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: HEADER_ROW, c: 0 }, e: { r: Math.max(range.e.r, HEADER_ROW), c: 5 } }) };
+  // ── Header tabel ─────────────────────────────────────────────────
+  const headers = ["No", "ID", "Nama", "Deskripsi", "Status", "Dibuat", "Diperbarui"];
+  const hr = ws.getRow(HEADER_ROW);
+  hr.height = 28;
+  headers.forEach((h, i) => {
+    const cell = hr.getCell(FIRST + i);
+    cell.value = h.toUpperCase();
+    cell.font = { name: FONT, size: 10, bold: true, color: { argb: C.white } };
+    cell.fill = solid(C.navySoft);
+    cell.alignment = {
+      vertical: "middle",
+      horizontal: i <= 1 || i >= 4 ? "center" : "left",
+      indent: i === 2 || i === 3 ? 1 : 0,
+    };
+    cell.border = { bottom: { style: "medium", color: { argb: C.accent } } };
+  });
 
-  // Freeze pane
-  ws["!freeze"] = { ySplit: HEADER_ROW + 1 };
+  // ── Baris data ───────────────────────────────────────────────────
+  rows.forEach((r, i) => {
+    const rowNo = DATA_START + i;
+    const row = ws.getRow(rowNo);
+    const desc = r.deskripsi ?? "";
+    // perkiraan tinggi baris untuk teks yang membungkus (kolom ±58 karakter)
+    const lines = Math.min(
+      12,
+      Math.max(
+        1,
+        desc.split(/\r?\n/).reduce((n, l) => n + Math.max(1, Math.ceil(l.length / 62)), 0),
+        Math.ceil((r.nama ?? "").length / 32),
+      ),
+    );
+    row.height = Math.max(24, lines * 15 + 8);
 
-  XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+    const vals: (string | number | Date | null)[] = [
+      { formula: `ROW()-${HEADER_ROW}` } as unknown as number,
+      r.id,
+      r.nama,
+      desc,
+      STATUS_LABEL[r.status] ?? r.status,
+      localDate(r.created_at, tzOffset),
+      localDate(r.updated_at, tzOffset),
+    ];
+    vals.forEach((v, k) => {
+      const cell = row.getCell(FIRST + k);
+      cell.value = v as ExcelJS.CellValue;
+      cell.font = { name: FONT, size: 10, color: { argb: C.ink } };
+      cell.fill = solid(i % 2 === 1 ? C.zebra : C.white);
+      cell.border = { bottom: thin(C.line) };
+      const center = k <= 1 || k >= 4;
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: center ? "center" : "left",
+        wrapText: k === 2 || k === 3,
+        indent: k === 2 || k === 3 ? 1 : 0,
+      };
+    });
+    row.getCell(2).font = { name: FONT, size: 10, color: { argb: C.muted } };
+    row.getCell(3).font = { name: FONT, size: 10, color: { argb: C.muted } };
+    row.getCell(4).font = { name: FONT, size: 10, bold: true, color: { argb: C.ink } };
+    row.getCell(7).numFmt = "dd mmm yyyy, hh:mm";
+    row.getCell(8).numFmt = "dd mmm yyyy, hh:mm";
+    row.getCell(6).font = { name: FONT, size: 10, bold: true, color: { argb: C.ink } };
+  });
 
-  // Write to buffer
-  const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+  if (rows.length === 0) {
+    ws.mergeCells(DATA_START, FIRST, DATA_START, LAST);
+    const c = ws.getCell(DATA_START, FIRST);
+    c.value = "Tidak ada data untuk filter ini.";
+    c.font = { name: FONT, size: 11, italic: true, color: { argb: C.muted } };
+    c.alignment = { horizontal: "center", vertical: "middle" };
+    ws.getRow(DATA_START).height = 40;
+  } else {
+    // Warna status otomatis (tetap benar bila status diubah manual di Excel)
+    const rng = `F${DATA_START}:F${DATA_END}`;
+    const rule = (text: string, fg: string, bg: string): ExcelJS.ConditionalFormattingRule => ({
+      type: "cellIs", operator: "equal", formulae: [`"${text}"`], priority: 1,
+      style: { font: { bold: true, color: { argb: fg } }, fill: { type: "pattern", pattern: "solid", bgColor: { argb: bg }, fgColor: { argb: bg } } },
+    });
+    ws.addConditionalFormatting({
+      ref: rng,
+      rules: [
+        { ...rule("Menunggu", C.pendingFg, C.pendingBg), priority: 1 },
+        { ...rule("Disetujui", C.okFg, C.okBg), priority: 2 },
+        { ...rule("Ditolak", C.noFg, C.noBg), priority: 3 },
+      ],
+    });
+    ws.autoFilter = { from: { row: HEADER_ROW, column: FIRST }, to: { row: DATA_END, column: LAST } };
+  }
 
-  const filename = `laporan-lapangan-${stamp(new Date())}.xlsx`;
+  // ── Footer ───────────────────────────────────────────────────────
+  const foot = DATA_END + 2;
+  ws.mergeCells(foot, FIRST, foot, LAST);
+  const fc = ws.getCell(foot, FIRST);
+  const stamp = localDate(new Date().toISOString(), tzOffset)!;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  fc.value =
+    `Diekspor pada ${pad(stamp.getUTCDate())}/${pad(stamp.getUTCMonth() + 1)}/${stamp.getUTCFullYear()} ` +
+    `${pad(stamp.getUTCHours())}:${pad(stamp.getUTCMinutes())}` +
+    (opts.truncated ? "   •   Data dipotong karena melebihi batas baris." : "");
+  fc.font = { name: FONT, size: 9, italic: true, color: { argb: C.muted } };
+  fc.alignment = { horizontal: "left", indent: 1 };
 
+  ws.pageSetup.printTitlesRow = `${HEADER_ROW}:${HEADER_ROW}`;
+  ws.pageSetup.printArea = `A1:I${foot}`;
+
+  return await wb.xlsx.writeBuffer();
+}
+
+// Edge Function: GET /functions/v1/export-xlsx?status=&q=&order=asc&tz=
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const MAX_ROWS = 5000;
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Expose-Headers": "content-disposition, x-export-truncated",
+};
+const json = (status: number, message: string) =>
+  new Response(JSON.stringify({ message }), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "GET") return json(405, "Metode tidak didukung.");
+
+  const url = new URL(req.url);
+  const status = url.searchParams.get("status") ?? "all";
+  const q = (url.searchParams.get("q") ?? "").trim();
+  const asc = url.searchParams.get("order") === "asc";
+  const tz = Number(url.searchParams.get("tz") ?? 0);
+  if (status !== "all" && !["pending", "approved", "rejected"].includes(status)) {
+    return json(400, "Status tidak valid.");
+  }
+
+  // Teruskan token kiriman frontend (anon key). Edge Function sengaja TIDAK
+  // memakai service_role: seluruh aturan akses ditegakkan RLS di Postgres,
+  // dan query di bawah hanya butuh hak baca.
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth) return json(401, "Token tidak ditemukan.");
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: auth } } },
+  );
+
+  let query = supabase
+    .from("reports")
+    .select("id,nama,deskripsi,status,created_at,updated_at")
+    .order("created_at", { ascending: asc })
+    .limit(MAX_ROWS + 1);
+  if (status !== "all") query = query.eq("status", status);
+  if (q) {
+    const esc = q.replace(/[%_,()]/g, (c) => `\\${c}`);
+    query = query.or(`nama.ilike.*${esc}*,deskripsi.ilike.*${esc}*`);
+  }
+
+  const { data, error } = await query;
+  if (error) return json(500, "Gagal mengambil data laporan.");
+
+  const truncated = (data?.length ?? 0) > MAX_ROWS;
+  const rows = (data ?? []).slice(0, MAX_ROWS) as ReportRow[];
+  const buf = await buildWorkbook({
+    rows, statusFilter: status, query: q, order: asc ? "asc" : "desc",
+    tzOffset: Number.isFinite(tz) ? tz : 0, truncated,
+  });
+
+  const d = new Date(Date.now() - (Number.isFinite(tz) ? tz : 0) * 60_000);
+  const stamp = d.toISOString().slice(0, 10);
   return new Response(buf, {
     headers: {
-      ...corsHeaders,
+      ...CORS,
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "X-Export-Truncated": truncated ? `true; limit=${EXPORT_ROW_MAX}` : "false",
+      "Content-Disposition": `attachment; filename="laporan-lapangan-${stamp}.xlsx"`,
+      "X-Export-Truncated": String(truncated),
     },
   });
 });

@@ -1,5 +1,5 @@
 {
   "imports": {
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs"
+    "exceljs": "npm:exceljs@4.4.0"
   }
 }
