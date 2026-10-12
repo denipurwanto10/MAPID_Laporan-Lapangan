@@ -19,6 +19,10 @@ interface RowActionsProps {
   action: PendingAction | null;
   /** false bila laporan ini satu-satunya data tersisa — Hapus disembunyikan. */
   canDelete: boolean;
+  /** true bila pengguna berwenang menyetujui/menolak (admin atau approver). */
+  canDecide: boolean;
+  /** true bila pengguna boleh mengubah isi laporan (pemilik atau admin). */
+  canEdit: boolean;
   onApprove: (id: number) => void;
   onReject: (id: number) => void;
   onEdit: () => void;
@@ -33,6 +37,8 @@ export function RowActions({
   status,
   action,
   canDelete,
+  canDecide,
+  canEdit,
   onApprove,
   onReject,
   onEdit,
@@ -45,10 +51,13 @@ export function RowActions({
   const rejecting = busy && action?.kind === "reject";
   const pending = status === "pending";
   const btnSize = full ? "h-11 flex-1" : "h-8";
+  // Pelapor tidak punya tombol keputusan; barisnya hanya berisi Ubah/Hapus.
+  const showDecider = pending && canDecide;
+  const hasMenu = pending && (canEdit || canDelete);
 
   return (
     <div className={cn("flex items-center gap-2", !full && "justify-end")}>
-      {pending ? (
+      {showDecider ? (
         <>
           <Button
             type="button"
@@ -76,19 +85,21 @@ export function RowActions({
           </Button>
         </>
       ) : (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1.5 text-xs text-muted-foreground",
-            full && "mr-auto",
-          )}
-          title="Laporan yang sudah diputuskan tidak dapat diubah"
-        >
-          <Lock aria-hidden="true" className="size-3.5" />
-          Sudah diputuskan
-        </span>
+        !pending && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs text-muted-foreground",
+              full && "mr-auto",
+            )}
+            title="Laporan yang sudah diputuskan tidak dapat diubah"
+          >
+            <Lock aria-hidden="true" className="size-3.5" />
+            Sudah diputuskan
+          </span>
+        )
       )}
 
-      {pending && (
+      {hasMenu && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -103,10 +114,12 @@ export function RowActions({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem onSelect={onEdit}>
-              <Pencil aria-hidden="true" />
-              Ubah
-            </DropdownMenuItem>
+            {canEdit && (
+              <DropdownMenuItem onSelect={onEdit}>
+                <Pencil aria-hidden="true" />
+                Ubah
+              </DropdownMenuItem>
+            )}
             {canDelete && (
               <>
                 <DropdownMenuSeparator />

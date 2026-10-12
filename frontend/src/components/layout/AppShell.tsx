@@ -1,6 +1,8 @@
-import { ClipboardList, FileText, Plus } from "lucide-react";
+import { ClipboardList, FileText, LogOut, Plus } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "../ui/button";
+import { useAuth } from "../../context/AuthContext";
+import { ROLE_LABEL } from "../../types/report";
 import type { Theme } from "../../hooks/useTheme";
 import { cn } from "../../lib/utils";
 
@@ -44,6 +46,28 @@ function Brand() {
  */
 export function AppShell({ children, theme, onToggleTheme, connection, pending, onAdd }: AppShellProps) {
   const conn = CONNECTION[connection];
+  const { user, logout } = useAuth();
+  const Identity = (
+    <div className="flex items-center justify-between gap-2 rounded-2xl border border-border bg-muted/40 px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{user?.username ?? "—"}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {user ? ROLE_LABEL[user.role] : ""}
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Keluar"
+        title="Keluar"
+        onClick={() => void logout()}
+        className="shrink-0 rounded-xl"
+      >
+        <LogOut aria-hidden="true" className="size-4" />
+      </Button>
+    </div>
+  );
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <a
@@ -78,6 +102,7 @@ export function AppShell({ children, theme, onToggleTheme, connection, pending, 
             </a>
           </nav>
           <div className="mt-auto flex flex-col gap-2 p-3">
+            {Identity}
             <div className="flex items-center justify-between rounded-2xl border border-border bg-card py-1 pr-1 pl-3">
               <span className="text-xs text-muted-foreground">
                 {theme === "dark" ? "Mode gelap" : "Mode terang"}

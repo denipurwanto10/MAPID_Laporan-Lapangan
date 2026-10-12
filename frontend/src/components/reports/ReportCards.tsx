@@ -18,6 +18,11 @@ interface ReportCardsProps {
   /** Kata kunci pencarian aktif — untuk highlight hasil yang cocok. */
   query: string;
   selectedIds: number[];
+  /** true bila pengguna berwenang menyetujui/menolak (admin atau approver). */
+  canDecide: boolean;
+  /** ID user yang sedang login — dipakai mengecek kepemilikan laporan untuk Ubah/Hapus. */
+  currentUserId: number;
+  isAdmin: boolean;
   onToggleSelect: (id: number) => void;
   onToggleSelectPage: (ids: number[]) => void;
   onApprove: (id: number) => void;
@@ -28,14 +33,14 @@ interface ReportCardsProps {
 }
 
 /** Daftar kartu untuk layar kecil: area ketuk besar membuka detail, aksi cepat di bawahnya. */
-export function ReportCards({ reports, total, page, limit, action, query, selectedIds, onToggleSelect, onToggleSelectPage, onApprove, onReject, onEdit, onDelete, onOpen }: ReportCardsProps) {
+export function ReportCards({ reports, total, page, limit, action, query, selectedIds, canDecide, currentUserId, isAdmin, onToggleSelect, onToggleSelectPage, onApprove, onReject, onEdit, onDelete, onOpen }: ReportCardsProps) {
   const pendingIds = reports.filter((r) => r.status === "pending").map((r) => r.id);
   const selectedOnPage = pendingIds.filter((id) => selectedIds.includes(id)).length;
   const allChecked = pendingIds.length > 0 && selectedOnPage === pendingIds.length;
   const someChecked = selectedOnPage > 0 && !allChecked;
   return (
     <div className="flex flex-col gap-3 md:hidden">
-      {pendingIds.length > 0 && (
+      {pendingIds.length > 0 && canDecide && (
         <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2 text-sm font-medium shadow-card active:bg-muted/60">
           <input
             type="checkbox"
@@ -64,7 +69,7 @@ export function ReportCards({ reports, total, page, limit, action, query, select
           >
             <span className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground tabular-nums">
-                {report.status === "pending" ? (
+                {report.status === "pending" && canDecide ? (
                   <span onClick={(e) => e.stopPropagation()} className="flex items-center">
                     <input
                       type="checkbox"
@@ -94,17 +99,19 @@ export function ReportCards({ reports, total, page, limit, action, query, select
           </button>
           <div className="border-t border-border bg-muted/30 p-3">
             <RowActions
-              id={report.id}
-              name={report.nama}
-              status={report.status}
-              action={action}
-              canDelete={total > 1}
-              onApprove={onApprove}
-              onReject={onReject}
-              onEdit={() => onEdit(report)}
-              onDelete={() => onDelete(report)}
-              layout="full"
-            />
+                id={report.id}
+                name={report.nama}
+                status={report.status}
+                action={action}
+                canDelete={total > 1}
+                canDecide={canDecide}
+                canEdit={isAdmin || report.reporter_id === currentUserId}
+                onApprove={onApprove}
+                onReject={onReject}
+                onEdit={() => onEdit(report)}
+                onDelete={() => onDelete(report)}
+                layout="full"
+              />
           </div>
         </li>
       ))}

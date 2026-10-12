@@ -17,6 +17,12 @@ interface ReportTableProps {
   /** Kata kunci pencarian aktif — untuk highlight hasil yang cocok. */
   query: string;
   selectedIds: number[];
+  /** true bila pengguna berwenang menyetujui/menolak (admin atau approver). */
+  canDecide: boolean;
+  /** ID user yang sedang login — dipakai mengecek kepemilikan laporan. */
+  currentUserId: number;
+  /** true bila user adalah admin (boleh menyentuh semua laporan). */
+  isAdmin: boolean;
   onToggleSelect: (id: number) => void;
   onToggleSelectPage: (ids: number[]) => void;
   onApprove: (id: number) => void;
@@ -27,7 +33,7 @@ interface ReportTableProps {
 }
 
 /** Tabel desktop/tablet. Berada di dalam panel yang sama dengan toolbar. */
-export function ReportTable({ reports, total, page, limit, action, query, selectedIds, onToggleSelect, onToggleSelectPage, onApprove, onReject, onEdit, onDelete, onOpen }: ReportTableProps) {
+export function ReportTable({ reports, total, page, limit, action, query, selectedIds, canDecide, currentUserId, isAdmin, onToggleSelect, onToggleSelectPage, onApprove, onReject, onEdit, onDelete, onOpen }: ReportTableProps) {
   const pendingIds = reports.filter((r) => r.status === "pending").map((r) => r.id);
   const allChecked = pendingIds.length > 0 && pendingIds.every((id) => selectedIds.includes(id));
   const someChecked = !allChecked && pendingIds.some((id) => selectedIds.includes(id));
@@ -44,7 +50,7 @@ export function ReportTable({ reports, total, page, limit, action, query, select
                 ref={(el) => {
                   if (el) el.indeterminate = someChecked;
                 }}
-                disabled={pendingIds.length === 0}
+                disabled={!canDecide || pendingIds.length === 0}
                 onChange={() => onToggleSelectPage(pendingIds)}
                 aria-label="Pilih semua laporan pending di halaman ini"
                 className="size-4 cursor-pointer accent-primary"
@@ -62,7 +68,7 @@ export function ReportTable({ reports, total, page, limit, action, query, select
           {reports.map((report, index) => (
             <TableRow key={report.id} data-state={selectedIds.includes(report.id) ? "selected" : undefined} onClick={() => onOpen(report)} className="cursor-pointer">
               <TableCell className="text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                {report.status === "pending" ? (
+                {report.status === "pending" && canDecide ? (
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(report.id)}
@@ -114,6 +120,8 @@ export function ReportTable({ reports, total, page, limit, action, query, select
                   status={report.status}
                   action={action}
                   canDelete={total > 1}
+                  canDecide={canDecide}
+                  canEdit={isAdmin || report.reporter_id === currentUserId}
                   onApprove={onApprove}
                   onReject={onReject}
                   onEdit={() => onEdit(report)}

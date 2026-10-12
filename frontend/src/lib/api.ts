@@ -1,4 +1,15 @@
-import type { ListMeta, Report, ReportSummary, SortOrder, StatusFilter, StatusHistory } from "../types/report";
+import type {
+  AuthSession,
+  AuthUser,
+  ListMeta,
+  ManagedUser,
+  Report,
+  ReportSummary,
+  SortOrder,
+  StatusFilter,
+  StatusHistory,
+  UserRole,
+} from "../types/report";
 
 /**
  * Klien API REST laporan lapangan.
@@ -13,6 +24,32 @@ import type { ListMeta, Report, ReportSummary, SortOrder, StatusFilter, StatusHi
 
 /** Base path API — relatif agar frontend & backend satu origin (Vercel). */
 const API_BASE = "/api";
+
+/** Token sesi login. Disimpan di sessionStorage agar hilang saat tab ditutup. */
+const TOKEN_KEY = "mapid-reports-token";
+
+function getToken(): string | null {
+  try {
+    return sessionStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setToken(token: string | null): void {
+  try {
+    if (token) sessionStorage.setItem(TOKEN_KEY, token);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    // sessionStorage tak tersedia (mode privat ketat) — abaikan.
+  }
+}
+
+/** Header auth untuk request ber-token (kosong bila belum login). */
+export function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -46,8 +83,12 @@ function sortColumn(_order: SortOrder | undefined): "created_at" | "updated_at" 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: { "Content-Type": "application/json", ...authHeaders(), ...init?.headers },
   });
+  if (res.status === 401) {
+    // Token basi/expired → buang supaya user kembali ke halaman login.
+    setToken(null);
+  }
   if (!res.ok) throw await toApiError(res, `Permintaan gagal (${res.status})`);
   const body = (await res.json()) as { success: boolean; data: T };
   return body.data;
@@ -74,8 +115,9 @@ export const api = {
     if (q.trim()) search.set("q", q.trim());
 
     const res = await fetch(`${API_BASE}/reports?${search.toString()}`, {
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
     });
+    if (res.status === 401) setToken(null);
     if (!res.ok) throw await toApiError(res, "Gagal memuat daftar laporan");
     const body = (await res.json()) as {
       success: boolean;
@@ -156,5 +198,69 @@ export const api = {
         body: JSON.stringify({ ids, status }),
       },
     );
+  },
+
+  /* ---------------------------------------------------------------- auth -- */
+
+  /** Login. Token disimpan di sessionStorage lalu dikembalikan. */
+  async login(username: string, password: string): Promise<AuthSession> {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw await toApiError(res, "Gagal masuk");
+    const body = (await res.json()) as { data: AuthSession };
+    setToken(body.data.token);
+    return body.data;
+  },
+
+  /** Profil user dari token yang disimpan. */
+  async me(): Promise<AuthUser> {
+    return request<AuthUser>("/auth/me");
+  },
+
+  /** Logout: cabut token di server, lalu buang dari storage. */
+  async logout(): Promise<void> {
+    try {
+      await request<null>("/auth/logout", { method: "POST" });
+    } finally {
+      setToken(null);
+    }
+  },
+
+  /* -------------------------------------------------------------- users -- */
+
+  /** Daftar akun — hanya admin. */
+  async listUsers(): Promise<ManagedUser[]> {
+    return request<ManagedUser[]>("/users");
+  },
+
+  /** Buat akun baru — hanya admin. */
+  async createUser(
+    username: string,
+    password: string,
+    role: UserRole,
+  ): Promise<ManagedUser> {
+    return request<ManagedUser>("/users", {
+      method: "POST",
+      body: JSON.stringify({ username, password, role }),
+    });
+  },
+
+  /** Ubah peran dan/atau reset password — hanya admin. */
+  async updateUser(
+    id: number,
+    patch: { role?: UserRole; password?: string },
+  ): Promise<ManagedUser> {
+    return request<ManagedUser>(`/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+  },
+
+  /** Hapus akun — hanya admin, dan tidak boleh admin terakhir. */
+  async deleteUser(id: number): Promise<{ id: number }> {
+    return request<{ id: number }>(`/users/${id}`, { method: "DELETE" });
   },
 };

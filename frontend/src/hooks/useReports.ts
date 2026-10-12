@@ -4,6 +4,7 @@ import { ApiError, api } from "../lib/api";
 import {
   PAGE_SIZE,
   PAGE_SIZE_OPTIONS,
+  type AuthUser,
   type ListMeta,
   type PageSize,
   type Report,
@@ -61,7 +62,7 @@ function summaryAfterDelete(s: ReportSummary): ReportSummary {
 
 /* ---------------- Hook utama ---------------- */
 
-export function useReports() {
+export function useReports(user: AuthUser | null) {
   /* ----- State daftar + filter (selalu tercermin di URL) ----- */
   const initial = useRef(readParamsFromUrl()).current;
   const [reports, setReports] = useState<Report[]>([]);
@@ -161,6 +162,13 @@ export function useReports() {
   useEffect(() => {
     void load("initial");
   }, [load]);
+
+  /* ----- Muat ulang saat identitas berubah (login baru / user lain) ---- */
+  // Lapisan server memfilter daftar per peran (Pelapor hanya miliknya), jadi daftar
+  // wajib di-refetch begitu user berganti agar tidak menampilkan data sesi sebelumnya.
+  useEffect(() => {
+    if (user) void load("silent");
+  }, [user, load]);
 
   /* ----- Refresh otomatis tiap 15 detik + saat tab kembali terlihat ----- */
   // Poll diam-diam ("poll"): tidak ada spinner, tidak ada toast bila gagal.

@@ -1,4 +1,4 @@
-import { ApiError } from "./api";
+import { ApiError, authHeaders } from "./api";
 import type { SortOrder, StatusFilter } from "../types/report";
 
 interface ExportParams {
@@ -41,7 +41,9 @@ export async function exportReports(params: ExportParams): Promise<ExportResult>
 
   let res: Response;
   try {
-    res = await fetch(`/api/reports/export.xlsx?${search.toString()}`);
+    res = await fetch(`/api/reports/export.xlsx?${search.toString()}`, {
+      headers: authHeaders(),
+    });
   } catch {
     throw new ApiError(0, "Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.");
   }

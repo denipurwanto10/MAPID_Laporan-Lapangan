@@ -1,5 +1,5 @@
 import { AppError } from './errors';
-import { REPORT_STATUSES, UPDATABLE_STATUSES, type ListQuery, type ReportStatus } from './types';
+import { REPORT_STATUSES, UPDATABLE_STATUSES, USER_ROLES, type ListQuery, type ReportStatus, type UserRole } from './types';
 
 export const NAMA_MAX = 200;
 export const DESKRIPSI_MAX = 2000;
@@ -117,4 +117,113 @@ export function validateBulkStatusChange(body: unknown): { ids: number[]; status
   }
   const status = validateStatusChange({ status: isRecord(body) ? body.status : undefined });
   return { ids, status };
+}
+
+/* ---------------- Autentikasi & pengelolaan akun ---------------- */
+
+export const USERNAME_MAX = 50;
+export const PASSWORD_MIN = 8;
+export const PASSWORD_MAX = 128;
+
+/** Aturan nama akun: huruf, angka, titik, garis bawah, strip; tanpa spasi. */
+const USERNAME_PATTERN = /^[A-Za-z0-9._-]+$/;
+
+/** Validasi body POST /api/auth/login. */
+export function validateLogin(body: unknown): { username: string; password: string } {
+  if (!isRecord(body)) {
+    throw new AppError(400, 'Body request harus berupa JSON object');
+  }
+  const username = clean(body.username).toLowerCase();
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (!username || !password) {
+    throw new AppError(400, 'Username dan password wajib diisi');
+  }
+  return { username, password };
+}
+
+/** Validasi body POST /api/users (buat akun baru — hanya admin). */
+export function validateCreateUser(
+  body: unknown,
+): { username: string; password: string; role: UserRole } {
+  if (!isRecord(body)) {
+    throw new AppError(400, 'Body request harus berupa JSON object');
+  }
+  const username = clean(body.username).toLowerCase();
+  const password = typeof body.password === 'string' ? body.password : '';
+  const role = clean(body.role);
+
+  if (!username) throw new AppError(400, 'Username wajib diisi');
+  if (username.length < 3) throw new AppError(400, 'Username minimal 3 karakter');
+  if (username.length > USERNAME_MAX) {
+    throw new AppError(400, `Username maksimal ${USERNAME_MAX} karakter`);
+  }
+  if (!USERNAME_PATTERN.test(username)) {
+    throw new AppError(400, 'Username hanya boleh huruf, angka, titik, garis bawah, atau strip');
+  }
+  validatePasswordStrength(password);
+  if (!(USER_ROLES as readonly string[]).includes(role)) {
+    throw new AppError(400, 'Role harus salah satu dari: admin, pelapor, approver');
+  }
+  return { username, password, role: role as UserRole };
+}
+
+/** Validasi body PATCH /api/users/:id — semua field opsional. */
+export function validateUpdateUser(
+  body: unknown,
+): { username?: string; password?: string; role?: UserRole } {
+  if (!isRecord(body)) {
+    throw new AppError(400, 'Body request harus berupa JSON object');
+  }
+  const out: { username?: string; password?: string; role?: UserRole } = {};
+
+  if (body.username !== undefined) {
+    const username = clean(body.username).toLowerCase();
+    if (!username) throw new AppError(400, 'Username tidak boleh kosong');
+    if (username.length < 3) throw new AppError(400, 'Username minimal 3 karakter');
+    if (username.length > USERNAME_MAX) {
+      throw new AppError(400, `Username maksimal ${USERNAME_MAX} karakter`);
+    }
+    if (!USERNAME_PATTERN.test(username)) {
+      throw new AppError(400, 'Username hanya boleh huruf, angka, titik, garis bawah, atau strip');
+    }
+    out.username = username;
+  }
+
+  if (body.password !== undefined) {
+    if (typeof body.password !== 'string') {
+      throw new AppError(400, 'Password harus berupa teks');
+    }
+    validatePasswordStrength(body.password);
+    out.password = body.password;
+  }
+
+  if (body.role !== undefined) {
+    const role = clean(body.role);
+    if (!(USER_ROLES as readonly string[]).includes(role)) {
+      throw new AppError(400, 'Role harus salah satu dari: admin, pelapor, approver');
+    }
+    out.role = role as UserRole;
+  }
+
+  if (out.username === undefined && out.password === undefined && out.role === undefined) {
+    throw new AppError(400, 'Tidak ada perubahan yang dikirim');
+  }
+  return out;
+}
+
+/**
+ * Tolak password lemah. Panjang minimum 8 plus minimal satu huruf dan satu
+ * angka — cukup untuk akun demo internal tanpa menyulitkan pengguna.
+ */
+function validatePasswordStrength(password: string): void {
+  if (!password) throw new AppError(400, 'Password wajib diisi');
+  if (password.length < PASSWORD_MIN) {
+    throw new AppError(400, `Password minimal ${PASSWORD_MIN} karakter`);
+  }
+  if (password.length > PASSWORD_MAX) {
+    throw new AppError(400, `Password maksimal ${PASSWORD_MAX} karakter`);
+  }
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    throw new AppError(400, 'Password harus memuat minimal satu huruf dan satu angka');
+  }
 }

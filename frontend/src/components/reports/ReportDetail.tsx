@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Hash, Lock, Pencil, Check, Trash2, X, History } from "lucide-react";
+import { CalendarDays, Hash, Lock, Pencil, Check, Trash2, X, History, Gavel, UserRound } from "lucide-react";
 import { Button } from "../ui/button";
 import { Skeleton } from "../ui/skeleton";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../ui/sheet";
 import { StatusBadge } from "./StatusBadge";
 import { ApiError, api } from "../../lib/api";
 import { formatTanggal } from "../../lib/format";
+import { useAuth } from "../../context/AuthContext";
 import { STATUS_LABEL, type Report, type ReportStatus, type StatusHistory } from "../../types/report";
 import { cn } from "../../lib/utils";
 
@@ -94,6 +95,7 @@ function StatusTimeline({ id, status, createdAt }: { id: number; status: ReportS
             <p className="text-sm font-semibold">{STATUS_LABEL[h.to_status]}</p>
             <p className="text-xs text-muted-foreground tabular-nums">
               dari {STATUS_LABEL[h.from_status]} · <time dateTime={h.changed_at}>{formatTanggal(h.changed_at)}</time>
+              {h.decided_by_name ? ` · oleh ${h.decided_by_name}` : ""}
             </p>
           </div>
         </li>
@@ -113,6 +115,7 @@ function StatusTimeline({ id, status, createdAt }: { id: number; status: ReportS
 
 /** Panel detail: deskripsi lengkap, metadata, riwayat status, dan semua aksi untuk satu laporan. */
 export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onReject, onEdit, onDelete }: ReportDetailProps) {
+  const { user } = useAuth();
   // Simpan laporan terakhir agar isi panel tidak kosong selama animasi tutup.
   // Penyesuaian state saat render (bukan di effect): pola resmi React untuk
   // menyimpan snapshot prop sebelumnya — tidak memicu render beruntun.
@@ -122,6 +125,14 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
   }
   const shown = report ?? last;
   const pending = shown?.status === "pending";
+  const isDecider = user?.role === "admin" || user?.role === "approver";
+  const isOwner = shown != null && user != null && shown.reporter_id === user.id;
+  const isAdmin = user?.role === "admin";
+  const canDecideThis = pending && !!isDecider;
+  const canEditThis = pending && (isOwner || isAdmin);
+  // Approver tidak boleh menghapus; pemilik boleh menghapus; admin boleh.
+  const canDeleteThis = pending && (isOwner || isAdmin) && canDelete;
+  const canUndo = !pending && isDecider && shown?.status === "rejected" ? "approved" : !pending && isDecider && shown?.status === "approved" ? "rejected" : null;
 
   return (
     <Sheet open={report !== null} onOpenChange={(open) => !open && onClose()}>
@@ -153,6 +164,13 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                     <dd className="font-medium tabular-nums">{formatTanggal(shown.created_at)}</dd>
                   </div>
                 </div>
+                <div className="flex items-start gap-2.5">
+                  <UserRound aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Pelapor</dt>
+                    <dd className="font-medium">{shown.reporter_name}</dd>
+                  </div>
+                </div>
                 <div className="hidden items-start gap-2.5 sm:flex">
                   <Hash aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <div>
@@ -160,13 +178,25 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                     <dd className="font-medium tabular-nums">#{shown.id}</dd>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5 sm:col-span-2">
+                <div className="flex items-start gap-2.5">
                   <History aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <div>
                     <dt className="text-xs text-muted-foreground">Terakhir diperbarui</dt>
                     <dd className="font-medium tabular-nums">{formatTanggal(shown.updated_at)}</dd>
                   </div>
                 </div>
+                {shown.decided_by_name && (
+                  <div className="flex items-start gap-2.5 sm:col-span-2">
+                    <Gavel aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                    <div>
+                      <dt className="text-xs text-muted-foreground">Keputusan akhir</dt>
+                      <dd className="font-medium">
+                        {STATUS_LABEL[shown.status]} oleh {shown.decided_by_name}
+                        {shown.decided_at ? ` · ${formatTanggal(shown.decided_at)}` : ""}
+                      </dd>
+                    </div>
+                  </div>
+                )}
               </dl>
 
               <section aria-labelledby="detail-riwayat">
@@ -182,7 +212,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
             </SheetBody>
 
             <SheetFooter>
-              {pending ? (
+              {canDecideThis ? (
                 <>
                   <div className="grid grid-cols-2 gap-2">
                     <Button type="button" variant="approve" className="h-11" disabled={busy} onClick={() => onApprove(shown)}>
@@ -194,29 +224,40 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                       Tolak
                     </Button>
                   </div>
-                  <div className="flex gap-2">
+                  {(canEditThis) && (
                     <Button type="button" variant="outline" className="h-11 flex-1" disabled={busy} onClick={() => onEdit(shown)}>
                       <Pencil aria-hidden="true" />
                       Ubah
                     </Button>
-                    {canDelete && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-11 flex-1 text-destructive hover:text-destructive"
-                        disabled={busy}
-                        onClick={() => onDelete(shown)}
-                      >
-                        <Trash2 aria-hidden="true" />
-                        Hapus
-                      </Button>
-                    )}
-                  </div>
+                  )}
+                  {canDeleteThis && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 flex-1 text-destructive hover:text-destructive"
+                      disabled={busy}
+                      onClick={() => onDelete(shown)}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      Hapus
+                    </Button>
+                  )}
                 </>
+              ) : !pending && canUndo ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="approve" className="h-11" disabled={busy} onClick={() => onApprove(shown)}>
+                    <Check aria-hidden="true" />
+                    Setujui
+                  </Button>
+                  <Button type="button" variant="reject" className="h-11" disabled={busy} onClick={() => onReject(shown)}>
+                    <X aria-hidden="true" />
+                    Tolak
+                  </Button>
+                </div>
               ) : (
                 <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
                   <Lock aria-hidden="true" className="size-4 shrink-0" />
-                  Laporan yang sudah diputuskan tidak dapat diubah.
+                  {pending ? "Keputusan hanya bisa dilakukan Admin atau Approver." : "Laporan yang sudah diputuskan tidak dapat diubah."}
                 </p>
               )}
             </SheetFooter>

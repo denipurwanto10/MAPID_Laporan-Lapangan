@@ -14,6 +14,9 @@ import { ReportTable } from './components/reports/ReportTable'
 import { EmptySearchState, EmptyState, ErrorState, StatsSkeleton, TableSkeleton } from './components/reports/States'
 import { StatsStrip } from './components/reports/StatsStrip'
 import { Toolbar } from './components/reports/Toolbar'
+import { Login } from './components/auth/Login'
+import { UserManager } from './components/users/UserManager'
+import { useAuth } from './context/AuthContext'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useReports } from './hooks/useReports'
 import { useTheme } from './hooks/useTheme'
@@ -21,7 +24,17 @@ import { ApiError } from './lib/api'
 import { exportReports } from './lib/export'
 import type { Report } from './types/report'
 
+/** Gaya tombol tab (Laporan / Kelola akun). */
+function cnTab(active: boolean): string {
+  return [
+    'min-h-9 cursor-pointer rounded-xl px-4 text-sm font-semibold transition-colors',
+    active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+  ].join(' ')
+}
+
 function App() {
+  const { user, checking } = useAuth()
+  const [tab, setTab] = useState<'laporan' | 'akun'>('laporan')
   const {
     reports,
     summary,
@@ -48,7 +61,7 @@ function App() {
     clearSelection,
     edit,
     remove,
-  } = useReports()
+  } = useReports(user)
   const { theme, toggle: toggleTheme } = useTheme()
   // Render satu tata letak saja (tabel di md+, kartu di bawahnya) dan tunda highlight pencarian
   // agar mengetik tetap responsif walau daftar panjang.
@@ -65,6 +78,14 @@ function App() {
   >(null)
   const [exporting, setExporting] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  const isAdmin = user?.role === 'admin'
+  // Admin dan Approver boleh memutus; Pelapor tidak.
+  const canDecide = isAdmin || user?.role === 'approver'
+  const currentUserId = user?.id ?? -1
+
+  // Tab "Kelola akun" hanya untuk Admin; kalau bukan admin, paksa kembali ke daftar laporan.
+  const activeTab = isAdmin ? tab : 'laporan'
 
   // Panel detail selalu membaca data terbaru dari daftar (status berubah -> panel ikut berubah).
   const selected = selectedId === null ? null : (reports.find((r) => r.id === selectedId) ?? null)
@@ -83,14 +104,33 @@ function App() {
           e.preventDefault()
           input.focus()
         }
-      } else if (e.key === 'n' || e.key === 'N') {
+      } else if ((e.key === 'n' || e.key === 'N') && (isAdmin || user?.role === 'pelapor')) {
         e.preventDefault()
         setDialogOpen(true)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+    // dependensi peran: pintasan "n" hanya aktif untuk yang boleh membuat laporan.
+  }, [isAdmin, user?.role])
+
+  // Layar login menggantikan seluruh aplikasi selama sesi belum siap atau sudah berakhir.
+  // Diletakkan setelah semua hook agar urutan hook tidak berubah antar render.
+  if (checking || !user) {
+    return (
+      <>
+        <Login />
+        <Toaster
+          theme={theme}
+          position="top-center"
+          richColors
+          closeButton
+          offset={{ top: 'max(1rem, env(safe-area-inset-top))' }}
+          toastOptions={{ duration: 3500 }}
+        />
+      </>
+    )
+  }
 
   async function handleExport(): Promise<void> {
     if (exporting) return
@@ -151,6 +191,32 @@ function App() {
       onAdd={() => setDialogOpen(true)}
     >
       <main className="page-gutter mx-auto flex w-full max-w-[1400px] flex-col gap-5 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:gap-6 sm:py-8 sm:pb-8 lg:gap-6 lg:pt-3 lg:pb-8 2xl:max-w-[1560px]">
+        {isAdmin && (
+          <div role="tablist" aria-label="Menu utama" className="flex gap-1.5 self-start rounded-2xl border border-border bg-card p-1 shadow-card">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'laporan'}
+              onClick={() => setTab('laporan')}
+              className={cnTab(activeTab === 'laporan')}
+            >
+              Laporan
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'akun'}
+              onClick={() => setTab('akun')}
+              className={cnTab(activeTab === 'akun')}
+            >
+              Kelola akun
+            </button>
+          </div>
+        )}
+        {activeTab === 'akun' && isAdmin ? (
+          <UserManager />
+        ) : (
+        <>
         <section aria-label="Ringkasan" className="flex flex-col gap-5 rounded-[1.75rem] border border-border bg-card p-4 shadow-card sm:gap-6 sm:rounded-[2rem] sm:p-6 lg:p-8">
           <PageHeader
             onAdd={() => setDialogOpen(true)}
@@ -220,6 +286,9 @@ function App() {
                       action={action}
                       query={listQuery}
                       selectedIds={selectedIds}
+                      canDecide={canDecide}
+                      currentUserId={currentUserId}
+                      isAdmin={isAdmin}
                       onToggleSelect={toggleSelect}
                       onToggleSelectPage={toggleSelectPage}
                       onApprove={requestApprove}
@@ -237,6 +306,9 @@ function App() {
                       action={action}
                       query={listQuery}
                       selectedIds={selectedIds}
+                      canDecide={canDecide}
+                      currentUserId={currentUserId}
+                      isAdmin={isAdmin}
                       onToggleSelect={toggleSelect}
                       onToggleSelectPage={toggleSelectPage}
                       onApprove={requestApprove}
@@ -264,6 +336,8 @@ function App() {
             </>
           )}
         </section>
+        </>
+        )}
       </main>
 
       <ReportDetail
