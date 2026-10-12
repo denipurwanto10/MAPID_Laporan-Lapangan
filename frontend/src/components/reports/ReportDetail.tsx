@@ -269,7 +269,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
               ) : (
                 <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
                   <Lock aria-hidden="true" className="size-4 shrink-0" />
-                  Keputusan masih bisa direvisi.
+                  Keputusan sudah dikunci.
                 </p>
               )}
             </SheetFooter>

@@ -91,10 +91,10 @@ export function RowActions({
               "inline-flex items-center gap-1.5 text-xs text-muted-foreground",
               full && "mr-auto",
             )}
-            title="Keputusan masih bisa direvisi"
+            title={canDecide ? "Keputusan masih bisa direvisi" : "Keputusan sudah dikunci"}
           >
             <Lock aria-hidden="true" className="size-3.5" />
-            <span className={cn(!full && "sr-only @3xl:not-sr-only")}>Sudah diputuskan</span>
+            <span className={cn(!full && "sr-only @3xl:not-sr-only")}>{canDecide ? "Sudah diputuskan" : "Sudah dikunci"}</span>
           </span>
         )
       )}
