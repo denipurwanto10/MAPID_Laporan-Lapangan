@@ -5,8 +5,14 @@
   "installCommand": "npm --prefix backend install && npm --prefix frontend install",
   "trailingSlash": false,
   "functions": {
-    "api/**/*.ts": {
+    "api/index.ts": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    }
+  ]
 }
