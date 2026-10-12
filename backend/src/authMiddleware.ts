@@ -66,7 +66,7 @@ export function requireRole(...roles: UserRole[]) {
 
 /** Helper peran — approver/admin boleh approve/reject (termasuk revisi). */
 export const requireDecider = requireRole(...DECIDER_ROLES);
-/** Admin/pelapor boleh membuat laporan. */
+/** Hanya pelapor yang boleh membuat laporan. */
 export const requireReporter = requireRole(...REPORTER_ROLES);
 /** Hanya admin yang boleh mengelola akun pengguna. */
 export const requireAdmin = requireRole(...ADMIN_ROLES);

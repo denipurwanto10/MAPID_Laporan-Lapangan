@@ -85,7 +85,8 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
   );
 }
 
-export function EmptyState({ onAdd }: { onAdd: () => void }) {
+export function EmptyState({ onAdd, canAdd }: { onAdd: () => void; canAdd?: boolean }) {
+  if (!canAdd) return null;
   return (
     <StateCard
       title="Belum ada laporan"

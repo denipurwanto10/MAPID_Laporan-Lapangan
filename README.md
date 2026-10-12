@@ -88,7 +88,7 @@ Seluruh endpoint **kecuali** `/api/health` dan `/api/auth/login` memerlukan head
 | `POST` | `/api/auth/logout` | Cabut sesi saat ini |
 | `GET` | `/api/auth/me` | Profil user yang login |
 | `GET` | `/api/reports` | Daftar laporan + statistik. Query: `page`, `limit`, `status`, `q`, `sort`, `order` |
-| `POST` | `/api/reports` | Buat laporan (Admin/Pelapor). Body: `{ nama, deskripsi }` |
+| `POST` | `/api/reports` | Buat laporan (Pelapor). Body: `{ nama, deskripsi }` |
 | `GET` | `/api/reports/:id` | Detail satu laporan |
 | `PATCH` | `/api/reports/:id` | Ubah nama/deskripsi (pemilik saat `pending`) |
 | `PATCH` | `/api/reports/:id/status` | Ubah status (Admin/Approver). Body: `{ status: "approved" \| "rejected" }` |

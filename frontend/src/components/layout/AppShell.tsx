@@ -337,7 +337,7 @@ export function AppShell({ children, theme, onToggleTheme, connection, pending, 
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
 
-      {view === "laporan" && (
+      {view === "laporan" && user?.role === "pelapor" && (
         <Button
           type="button"
           onClick={onAdd}

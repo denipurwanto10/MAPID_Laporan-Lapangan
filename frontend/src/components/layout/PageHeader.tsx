@@ -9,6 +9,8 @@ interface PageHeaderProps {
   failed?: boolean;
   /** Pintasan: tampilkan hanya laporan Menunggu. */
   onReviewPending: () => void;
+  /** true bila pengguna boleh membuat laporan (pelapor). */
+  canCreate: boolean;
 }
 
 const TODAY = new Intl.DateTimeFormat("id-ID", {
@@ -18,7 +20,7 @@ const TODAY = new Intl.DateTimeFormat("id-ID", {
   year: "numeric",
 }).format(new Date());
 
-export function PageHeader({ onAdd, pending, failed = false, onReviewPending }: PageHeaderProps) {
+export function PageHeader({ onAdd, pending, failed = false, onReviewPending, canCreate }: PageHeaderProps) {
   const description = failed
     ? "Laporan gagal dimuat."
     : pending === null
@@ -49,10 +51,12 @@ export function PageHeader({ onAdd, pending, failed = false, onReviewPending }: 
           )}
         </p>
       </div>
-      <Button type="button" onClick={onAdd} className="hidden h-11 shrink-0 rounded-full px-5 sm:inline-flex sm:self-end" title="Pintasan: tekan N">
-        <Plus aria-hidden="true" />
-        Buat laporan
-      </Button>
+      {canCreate && (
+        <Button type="button" onClick={onAdd} className="hidden h-11 shrink-0 rounded-full px-5 sm:inline-flex sm:self-end" title="Pintasan: tekan N">
+          <Plus aria-hidden="true" />
+          Buat laporan
+        </Button>
+      )}
     </div>
   );
 }

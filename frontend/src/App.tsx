@@ -87,6 +87,7 @@ function App() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const isAdmin = user?.role === 'admin'
+  const canCreate = user?.role === 'pelapor'
   // Admin dan Approver boleh memutus; Pelapor tidak.
   const canDecide = isAdmin || user?.role === 'approver'
   const currentUserId = user?.id ?? -1
@@ -116,15 +117,15 @@ function App() {
           e.preventDefault()
           input.focus()
         }
-      } else if ((e.key === 'n' || e.key === 'N') && (isAdmin || user?.role === 'pelapor')) {
+      } else if ((e.key === 'n' || e.key === 'N') && user?.role === 'pelapor') {
         e.preventDefault()
         setDialogOpen(true)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-    // dependensi peran: pintasan "n" hanya aktif untuk yang boleh membuat laporan.
-  }, [isAdmin, user?.role])
+    // dependensi peran: pintasan "n" hanya aktif untuk pelapor.
+  }, [user?.role])
 
   // Saat token sesi sedang diverifikasi (refresh halaman), tampilkan layar kosong —
   // JANGAN layar login, karena sesi yang masih valid akan langsung masuk.
@@ -229,6 +230,7 @@ function App() {
               changeFilter('pending')
               document.getElementById('daftar-laporan')?.scrollIntoView({ block: 'start' })
             }}
+            canCreate={canCreate}
           />
           {loading ? <StatsSkeleton /> : !error && <StatsStrip summary={summary} />}
         </section>
@@ -252,7 +254,7 @@ function App() {
                 summary={summary}
               />
               {meta.total === 0 && !query.trim() && filter === 'all' ? (
-                <EmptyState onAdd={() => setDialogOpen(true)} />
+                <EmptyState onAdd={() => setDialogOpen(true)} canAdd={canCreate} />
               ) : reports.length === 0 ? (
                 <EmptySearchState
                   title={filter !== 'all' ? `Belum ada laporan ${STATUS_LABEL[filter]}` : undefined}

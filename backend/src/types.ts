@@ -10,8 +10,8 @@ export type UserRole = (typeof USER_ROLES)[number];
 
 /** Peran yang boleh melakukan approve/reject, termasuk revisi antartatus. */
 export const DECIDER_ROLES: readonly UserRole[] = ['admin', 'approver'];
-/** Peran yang boleh membuat laporan. */
-export const REPORTER_ROLES: readonly UserRole[] = ['admin', 'pelapor'];
+/** Peran yang boleh membuat laporan — hanya pelapor. */
+export const REPORTER_ROLES: readonly UserRole[] = ['pelapor'];
 /** Peran yang boleh mengelola akun pengguna. */
 export const ADMIN_ROLES: readonly UserRole[] = ['admin'];
 
