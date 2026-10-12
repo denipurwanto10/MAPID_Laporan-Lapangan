@@ -5,7 +5,7 @@
   "installCommand": "npm --prefix backend install && npm --prefix frontend install",
   "trailingSlash": false,
   "functions": {
-    "api/[[...path]].ts": {
+    "api/**/*.ts": {
       "maxDuration": 30,
       "memory": 1024
     }

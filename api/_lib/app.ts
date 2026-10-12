@@ -1,16 +1,16 @@
 /**
- * Entry point Vercel serverless — satu fungsi Express untuk seluruh /api/*.
+ * Aplikasi Express bersama untuk seluruh Serverless Function Vercel.
  *
- * `api/index.ts` di root repo otomatis terdeteksi Vercel sebagai Serverless
- * Function. Express di-export (bukan app.listen()) karena Vercel tidak
- * menyediakan proses jangka panjang; routing internal tetap memakai path penuh
- * ('/api/reports') dan Vercel meneruskan request apa pun yang masuk ke sini.
+ * Berkas di api/ yang diawali garis bawah tidak di-router Vercel, jadi aman
+ * dipakai sebagai modul bersama. Tiap file route hanya re-export `default`
+ * di sini; Express tetap melihat pathname lengkap sehingga routing internal
+ * ('/api/reports/:id/status' dst) bekerja apa adanya.
  *
  * Env: DATABASE_URL (wajib — connection string Postgres Supabase),
  *      CORS_ORIGIN (opsional, default '*' untuk deployment publik).
  */
-import { createApp } from "../backend/src/app";
-import { createPool } from "../backend/src/db";
+import { createApp } from "../../backend/src/app";
+import { createPool } from "../../backend/src/db";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
