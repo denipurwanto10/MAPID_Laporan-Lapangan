@@ -111,9 +111,14 @@ function App() {
     // dependensi peran: pintasan "n" hanya aktif untuk yang boleh membuat laporan.
   }, [isAdmin, user?.role])
 
-  // Layar login menggantikan seluruh aplikasi selama sesi belum siap atau sudah berakhir.
+  // Saat token sesi sedang diverifikasi (refresh halaman), tampilkan layar kosong —
+  // JANGAN layar login, karena sesi yang masih valid akan langsung masuk.
+  // Layar login hanya muncul setelah verifikasi selesai dan user tetap null.
   // Diletakkan setelah semua hook agar urutan hook tidak berubah antar render.
-  if (checking || !user) {
+  if (checking) {
+    return <div aria-busy="true" aria-label="Memuat sesi" className="min-h-dvh bg-background" />
+  }
+  if (!user) {
     return (
       <>
         <Login theme={theme} onToggleTheme={toggleTheme} />
