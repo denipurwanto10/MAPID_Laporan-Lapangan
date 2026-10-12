@@ -17,3 +17,6 @@ Thumbs.db
 
 .vercel
 .env*
+
+# hasil export / build artifacts
+*.xlsx
