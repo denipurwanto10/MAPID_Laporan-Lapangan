@@ -155,8 +155,8 @@ function App() {
       const { truncated } = await exportReports({ status: filter, q: query, order })
       toast.success(
         truncated
-          ? 'Berhasil diunduh (XLSX). Sebagian data dipotong (batas 5000 baris).'
-          : 'Berhasil diunduh (XLSX).',
+          ? 'File XLSX terunduh. Hanya 5000 baris pertama yang disertakan.'
+          : 'File XLSX terunduh.',
       )
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'Gagal mengunduh data. Coba lagi.')
@@ -168,10 +168,10 @@ function App() {
   async function handleCreate(nama: string, deskripsi: string): Promise<void> {
     try {
       await create(nama, deskripsi)
-      toast.success('Laporan berhasil dibuat.')
+      toast.success('Laporan dibuat.')
     } catch (e) {
       throw new Error(
-        e instanceof ApiError ? e.message : 'Laporan gagal disimpan. Coba lagi.',
+        e instanceof ApiError ? e.message : 'Laporan belum tersimpan. Coba lagi.',
       )
     }
   }
@@ -253,7 +253,7 @@ function App() {
                   title={filter !== 'all' ? `Belum ada laporan ${STATUS_LABEL[filter]}` : undefined}
                   description={
                     filter !== 'all'
-                      ? `Belum ada laporan berstatus ${STATUS_LABEL[filter]}. Ubah filter atau tambah laporan baru.`
+                      ? `Tidak ada laporan berstatus ${STATUS_LABEL[filter]}. Coba ganti filter atau buat laporan baru.`
                       : undefined
                   }
                   onClear={() => {
@@ -372,7 +372,7 @@ function App() {
         initial={editTarget ? { nama: editTarget.nama, deskripsi: editTarget.deskripsi } : null}
         title="Ubah laporan"
         submitLabel="Simpan perubahan"
-        submittingLabel="Menyimpan…"
+        submittingLabel="Menyimpan..."
       />
       {confirm && (
         <ConfirmDialog
@@ -389,12 +389,12 @@ function App() {
           }
           description={
             confirm.kind === 'bulk'
-              ? `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Yang sudah diputuskan dilewati.`
+              ? `${selectedIds.length} laporan pending akan ditandai ${confirm.status === 'approved' ? 'Disetujui' : 'Ditolak'} sekaligus. Yang sudah diputuskan akan dilewati.`
               : confirm.kind === 'approve'
-                ? `“${confirm.report.nama}” akan disetujui. Tidak bisa diubah lagi.`
+                ? `Laporan "${confirm.report.nama}" akan disetujui. Tidak bisa diubah lagi.`
                 : confirm.kind === 'reject'
-                  ? `“${confirm.report.nama}” akan ditolak. Tidak bisa diubah lagi.`
-                  : `“${confirm.report.nama}” akan dihapus permanen. Tidak bisa dibatalkan.`
+                  ? `Laporan "${confirm.report.nama}" akan ditolak. Tidak bisa diubah lagi.`
+                  : `Laporan "${confirm.report.nama}" akan dihapus permanen dan tidak bisa dikembalikan.`
           }
           confirmLabel={
             confirm.kind === 'bulk'

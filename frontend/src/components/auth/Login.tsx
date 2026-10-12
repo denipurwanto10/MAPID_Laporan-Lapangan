@@ -80,10 +80,10 @@ export function Login({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
       <section aria-labelledby={id} className="flex flex-col gap-3">
         <div className="flex flex-col gap-0.5">
           <h2 id={id} className={cn("text-sm font-semibold", dark && "text-white")}>
-            Coba dengan akun demo
+            Akun demo
           </h2>
           <p className={cn("text-xs", dark ? "text-white/60" : "text-muted-foreground")}>
-            Pilih salah satu untuk mengisi form, lalu Masuk.
+            Klik salah satu, form terisi otomatis.
           </p>
         </div>
         <ul
@@ -151,7 +151,7 @@ export function Login({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
             Laporan Lapangan
           </h1>
           <p className="max-w-sm text-sm leading-relaxed text-white/70 sm:text-base">
-            Masuk untuk membuat, melihat, dan memutuskan laporan lapangan.
+            Masuk untuk mengelola laporan lapangan.
           </p>
         </div>
 
@@ -224,7 +224,7 @@ export function Login({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: (
 
             <Button type="submit" disabled={busy} className="h-12 w-full rounded-2xl text-[15px]">
               {busy ? <Loader2 aria-hidden="true" className="animate-spin" /> : <LogIn aria-hidden="true" />}
-              {busy ? "Memeriksa…" : "Masuk"}
+              {busy ? "Memeriksa..." : "Masuk"}
             </Button>
           </form>
 

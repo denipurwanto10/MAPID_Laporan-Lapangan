@@ -45,10 +45,10 @@ export async function exportReports(params: ExportParams): Promise<ExportResult>
       headers: authHeaders(),
     });
   } catch {
-    throw new ApiError(0, "Tidak dapat terhubung ke server. Periksa koneksi lalu coba lagi.");
+    throw new ApiError(0, "Tidak bisa terhubung ke server. Cek koneksi lalu coba lagi.");
   }
   if (!res.ok) {
-    let message = `Server mengembalikan status ${res.status}. Coba lagi.`;
+    let message = `Server membalas dengan status ${res.status}. Coba lagi.`;
     try {
       const body = (await res.json()) as { message?: unknown };
       if (typeof body.message === "string" && body.message.trim()) message = body.message;

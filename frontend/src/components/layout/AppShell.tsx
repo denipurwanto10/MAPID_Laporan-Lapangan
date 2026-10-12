@@ -29,9 +29,9 @@ interface AppShellProps {
 }
 
 const CONNECTION: Record<ConnectionState, { label: string; short: string; dot: string }> = {
-  checking: { label: "Memeriksa koneksi…", short: "Memeriksa", dot: "bg-pending-foreground animate-pulse" },
+  checking: { label: "Memeriksa koneksi...", short: "Memeriksa", dot: "bg-pending-foreground animate-pulse" },
   online: { label: "Terhubung ke server", short: "Online", dot: "bg-approved-foreground shadow-[0_0_0_3px] shadow-approved-foreground/20" },
-  offline: { label: "Server tidak terjangkau", short: "Offline", dot: "bg-rejected-foreground" },
+  offline: { label: "Server tidak bisa dihubungi", short: "Offline", dot: "bg-rejected-foreground" },
 };
 
 function Brand({ compact = false, hideIcon = false }: { compact?: boolean; hideIcon?: boolean }) {
@@ -155,7 +155,7 @@ function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connecti
             <NavItem
               id="akun"
               label="Kelola akun"
-              hint="Pengguna & peran"
+              hint="Pengguna dan peran"
               Icon={Users}
               active={view === "akun"}
               onNavigate={onNavigate}
@@ -174,7 +174,7 @@ function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connecti
             type="button"
             onClick={() => onNavigate("profil")}
             aria-current={profileActive ? "page" : undefined}
-            aria-label={`Profil saya (${user?.username ?? "—"})`}
+            aria-label={`Profil saya (${user?.username ?? "-"})`}
             className={cn(
               "flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-xl p-0.5 text-left transition-colors focus-visible:outline-offset-0",
               !profileActive && "hover:bg-muted",
@@ -190,9 +190,9 @@ function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connecti
               {(user?.username ?? "?").slice(0, 2)}
             </span>
             <span className="min-w-0 flex-1 leading-tight">
-              <span className="block truncate text-sm font-semibold">{user?.username ?? "—"}</span>
+              <span className="block truncate text-sm font-semibold">{user?.username ?? "-"}</span>
               <span className={cn("block truncate text-xs", profileActive ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                {user ? ROLE_LABEL[user.role] : ""} · Profil saya
+                {user ? `${ROLE_LABEL[user.role]}, ` : ""}profil saya
               </span>
             </span>
           </button>
@@ -227,7 +227,7 @@ function SidebarBody({ view, onNavigate, pending, theme, onToggleTheme, connecti
           >
             <span className={cn("size-2 shrink-0 rounded-full", conn.dot)} aria-hidden="true" />
             <span className="truncate">{conn.short}</span>
-            <span className="sr-only"> — {conn.label}</span>
+            <span className="sr-only">. {conn.label}</span>
           </p>
         </div>
       </div>

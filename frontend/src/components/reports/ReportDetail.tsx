@@ -94,8 +94,8 @@ function StatusTimeline({ id, status, createdAt }: { id: number; status: ReportS
           <div className="min-w-0">
             <p className="text-sm font-semibold">{STATUS_LABEL[h.to_status]}</p>
             <p className="text-xs text-muted-foreground tabular-nums">
-              dari {STATUS_LABEL[h.from_status]} · <time dateTime={h.changed_at}>{formatTanggal(h.changed_at)}</time>
-              {h.decided_by_name ? ` · oleh ${h.decided_by_name}` : ""}
+              dari {STATUS_LABEL[h.from_status]}, <time dateTime={h.changed_at}>{formatTanggal(h.changed_at)}</time>
+              {h.decided_by_name ? ` oleh ${h.decided_by_name}` : ""}
             </p>
           </div>
         </li>
@@ -145,7 +145,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                 <span className="text-sm font-medium text-muted-foreground tabular-nums sm:hidden">#{shown.id}</span>
               </div>
               <SheetTitle>{shown.nama}</SheetTitle>
-              <SheetDescription className="sr-only">Detail dan riwayat status laporan</SheetDescription>
+              <SheetDescription className="sr-only">Detail laporan</SheetDescription>
             </SheetHeader>
 
             <SheetBody className="flex flex-col gap-6">
@@ -192,7 +192,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                       <dt className="text-xs text-muted-foreground">Keputusan akhir</dt>
                       <dd className="font-medium">
                         {STATUS_LABEL[shown.status]} oleh {shown.decided_by_name}
-                        {shown.decided_at ? ` · ${formatTanggal(shown.decided_at)}` : ""}
+                        {shown.decided_at ? `, ${formatTanggal(shown.decided_at)}` : ""}
                       </dd>
                     </div>
                   </div>
@@ -251,7 +251,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                   {!canDecideThis && !canEditThis && !canDeleteThis && (
                     <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
                       <Lock aria-hidden="true" className="size-4 shrink-0" />
-                      Keputusan hanya bisa dilakukan Admin atau Approver.
+                      Hanya Admin dan Approver yang bisa memutuskan.
                     </p>
                   )}
                 </>
@@ -269,7 +269,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
               ) : (
                 <p className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
                   <Lock aria-hidden="true" className="size-4 shrink-0" />
-                  Laporan yang sudah diputuskan tidak dapat diubah.
+                  Laporan yang sudah diputuskan tidak bisa diubah.
                 </p>
               )}
             </SheetFooter>

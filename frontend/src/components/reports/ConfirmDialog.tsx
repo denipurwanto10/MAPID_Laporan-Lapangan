@@ -69,7 +69,7 @@ export function ConfirmDialog({
           </Button>
           <Button type="button" variant={tone === "approve" ? "default" : "destructive"} onClick={onConfirm} disabled={busy}>
             {busy && <Loader2 aria-hidden="true" className="animate-spin" />}
-            {busy ? "Memproses…" : confirmLabel}
+            {busy ? "Memproses..." : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

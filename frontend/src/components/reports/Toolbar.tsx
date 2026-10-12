@@ -50,7 +50,7 @@ export function Toolbar({ query, onQuery, filter, onFilter, order, onOrder, onEx
             type="search"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
-            placeholder="Cari laporan…"
+            placeholder="Cari laporan..."
             aria-label="Cari laporan"
             aria-keyshortcuts="/"
             className="h-12 rounded-2xl border-transparent bg-muted/60 pr-11 pl-11 shadow-none focus-visible:bg-card md:h-10 md:border-input md:bg-muted/50 md:pr-10 [&::-webkit-search-cancel-button]:hidden"

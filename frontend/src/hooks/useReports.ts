@@ -20,7 +20,7 @@ export interface PendingAction {
 
 function messageOf(e: unknown): string {
   if (e instanceof ApiError) return e.message;
-  return "Terjadi kesalahan yang tidak terduga. Coba lagi.";
+  return "Ada masalah. Coba lagi.";
 }
 
 function readParamsFromUrl(): { page: number; limit: PageSize; status: StatusFilter; q: string; order: SortOrder } {

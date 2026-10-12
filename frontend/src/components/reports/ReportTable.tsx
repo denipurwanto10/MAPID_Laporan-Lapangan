@@ -53,7 +53,7 @@ export function ReportTable({ reports, total, page, limit, action, query, select
                 }}
                 disabled={!canDecide || pendingIds.length === 0}
                 onChange={() => onToggleSelectPage(pendingIds)}
-                aria-label="Pilih semua laporan pending di halaman ini"
+                aria-label="Pilih semua laporan menunggu di halaman ini"
                 className="size-4 cursor-pointer accent-primary"
               />
             </TableHead>

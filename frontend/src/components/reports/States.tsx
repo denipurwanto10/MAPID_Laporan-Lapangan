@@ -27,7 +27,7 @@ export function TableSkeleton() {
           </div>
         ))}
       </div>
-      <span className="sr-only">Memuat daftar laporan…</span>
+      <span className="sr-only">Memuat laporan...</span>
     </div>
   );
 }
@@ -48,7 +48,7 @@ export function StatsSkeleton() {
           </div>
         ))}
       </div>
-      <span className="sr-only">Memuat ringkasan laporan…</span>
+      <span className="sr-only">Memuat ringkasan...</span>
     </div>
   );
 }

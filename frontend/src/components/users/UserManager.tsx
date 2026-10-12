@@ -231,7 +231,7 @@ export function UserManager() {
         await api.updateUser(draft.id as number, patch);
       }
       setDraft(null);
-      toast.success(isNew ? "Akun berhasil dibuat." : "Perubahan akun disimpan.");
+      toast.success(isNew ? "Akun dibuat." : "Perubahan akun disimpan.");
       await load();
     } catch (e) {
       setFormError(e instanceof ApiError ? e.message : "Gagal menyimpan akun.");
@@ -274,7 +274,7 @@ export function UserManager() {
             </p>
             <h1 className="font-display text-[clamp(2rem,1.4rem+2.4vw,3rem)] leading-none">Kelola akun</h1>
             <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-              Buat akun baru di sini. Tidak ada pendaftaran mandiri; peran bisa diubah kapan saja.
+              Akun dibuat di sini, tidak ada pendaftaran sendiri. Peran bisa diubah kapan saja.
             </p>
           </div>
           <Button
@@ -315,7 +315,7 @@ export function UserManager() {
                 </div>
               ))}
             </div>
-            <span className="sr-only">Memuat daftar akun…</span>
+            <span className="sr-only">Memuat akun...</span>
           </div>
         ) : loadError ? (
           <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-border bg-card px-6 py-14 text-center sm:py-16 md:rounded-none md:border-0">
@@ -341,7 +341,7 @@ export function UserManager() {
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Cari username…"
+                  placeholder="Cari username..."
                   aria-label="Cari akun"
                   className="h-12 rounded-2xl border-transparent bg-muted/60 pr-11 pl-11 shadow-none focus-visible:bg-card md:h-10 md:border-input md:bg-muted/50 md:pr-10 [&::-webkit-search-cancel-button]:hidden"
                 />
@@ -489,7 +489,7 @@ export function UserManager() {
                           disabled={self}
                           onClick={() => setPendingDelete(u)}
                           aria-label={`Hapus akun ${u.username}`}
-                          title={self ? "Akun Anda sendiri tidak bisa dihapus" : undefined}
+                          title={self ? "Akun yang sedang dipakai tidak bisa dihapus" : undefined}
                           className="h-11 flex-1 md:h-10"
                         >
                           <Trash2 aria-hidden="true" />
@@ -589,7 +589,7 @@ export function UserManager() {
                                       disabled={self}
                                       onClick={() => setPendingDelete(u)}
                                       aria-label={`Hapus akun ${u.username}`}
-                                      title={self ? "Akun Anda sendiri tidak bisa dihapus" : undefined}
+                                      title={self ? "Akun yang sedang dipakai tidak bisa dihapus" : undefined}
                                     >
                                       <Trash2 aria-hidden="true" />
                                       Hapus
@@ -650,8 +650,8 @@ export function UserManager() {
                 </div>
                 <DialogDescription>
                   {editing
-                    ? `Ubah peran ${draft.username}. Isi password hanya bila ingin menggantinya.`
-                    : "Bagikan username dan password ini kepada pengguna yang bersangkutan."}
+                    ? `Ubah peran ${draft.username}. Password cukup diisi kalau mau diganti.`
+                    : "Berikan username dan password ini ke penggunanya."}
                 </DialogDescription>
               </DialogHeader>
 
@@ -729,7 +729,7 @@ export function UserManager() {
                       maxLength={PASSWORD_MAX}
                       value={draft.password}
                       onChange={(e) => setDraft({ ...draft, password: e.target.value })}
-                      placeholder={editing ? "Kosongkan bila tidak diubah" : `Minimal ${PASSWORD_MIN} karakter`}
+                      placeholder={editing ? "Kosongkan kalau tidak diganti" : `Minimal ${PASSWORD_MIN} karakter`}
                       className="pr-12 pl-10"
                     />
                     <button
@@ -759,7 +759,7 @@ export function UserManager() {
                   </Button>
                   <Button type="submit" disabled={saving}>
                     {saving && <Loader2 aria-hidden="true" className="animate-spin" />}
-                    {saving ? "Menyimpan…" : editing ? "Simpan perubahan" : "Buat akun"}
+                    {saving ? "Menyimpan..." : editing ? "Simpan perubahan" : "Buat akun"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -773,7 +773,7 @@ export function UserManager() {
           open
           onOpenChange={(open) => !open && setPendingDelete(null)}
           title="Hapus akun ini?"
-          description={`Akun “${pendingDelete.username}” akan dihapus permanen. Laporan yang pernah dibuatnya tetap tersimpan.`}
+          description={`Akun ${pendingDelete.username} akan dihapus permanen. Laporan buatannya tetap ada.`}
           confirmLabel="Hapus akun"
           tone="reject"
           busy={deleting}

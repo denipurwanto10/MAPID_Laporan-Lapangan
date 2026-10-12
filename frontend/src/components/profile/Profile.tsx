@@ -138,7 +138,7 @@ export function Profile() {
     setError(null);
 
     if (next !== confirm) {
-      setError("Konfirmasi password tidak sama dengan password baru.");
+      setError("Konfirmasi password tidak cocok.");
       return;
     }
     if (next.length < PASSWORD_MIN) {
@@ -146,7 +146,7 @@ export function Profile() {
       return;
     }
     if (!/[A-Za-z]/.test(next) || !/\d/.test(next)) {
-      setError("Password baru harus memuat minimal satu huruf dan satu angka.");
+      setError("Password baru harus berisi huruf dan angka.");
       return;
     }
 
@@ -227,14 +227,14 @@ export function Profile() {
           <div>
             <h2 className="font-display text-xl sm:text-2xl">Ganti password</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              Semua sesi aktif akan keluar setelah password diganti.
+              Setelah diganti, semua perangkat akan keluar otomatis.
             </p>
           </div>
           <div className="flex items-start gap-2.5 rounded-2xl border border-border bg-muted/40 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
             <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
             <p>
               {user.role === "admin"
-                ? "Password lama yang salah akan ditolak."
+                ? "Password lama harus diisi dengan benar."
                 : "Kalau lupa password lama, minta reset ke admin."}
             </p>
           </div>
@@ -279,7 +279,7 @@ export function Profile() {
             </Button>
             <Button type="submit" disabled={saving || !current || !next || !confirm} className="h-11 rounded-full px-5">
               {saving ? <Loader2 aria-hidden="true" className="animate-spin" /> : <ShieldCheck aria-hidden="true" className="size-4" />}
-              {saving ? "Menyimpan…" : "Simpan password baru"}
+              {saving ? "Menyimpan..." : "Simpan password baru"}
             </Button>
           </div>
         </form>

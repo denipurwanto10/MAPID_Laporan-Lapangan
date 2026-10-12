@@ -34,7 +34,7 @@ export function ReportDialog({
   initial = null,
   title = "Buat laporan",
   submitLabel = "Simpan laporan",
-  submittingLabel = "Menyimpan…",
+  submittingLabel = "Menyimpan...",
 }: ReportDialogProps) {
   const [nama, setNama] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
@@ -98,7 +98,7 @@ export function ReportDialog({
       onOpenChange(false);
       onSuccess?.();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Gagal menyimpan laporan. Coba lagi.");
+      setSubmitError(err instanceof Error ? err.message : "Laporan belum tersimpan. Coba lagi.");
     } finally {
       setSubmitting(false);
     }

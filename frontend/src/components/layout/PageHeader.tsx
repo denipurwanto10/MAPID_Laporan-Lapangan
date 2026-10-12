@@ -22,7 +22,7 @@ export function PageHeader({ onAdd, pending, failed = false, onReviewPending }: 
   const description = failed
     ? "Laporan gagal dimuat."
     : pending === null
-      ? "Memuat laporan…"
+      ? "Memuat laporan..."
       : pending > 0
         ? `${pending} laporan menunggu.`
         : "Tidak ada laporan yang menunggu.";
