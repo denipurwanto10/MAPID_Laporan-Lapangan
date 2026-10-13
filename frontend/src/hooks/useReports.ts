@@ -159,13 +159,10 @@ export function useReports(user: AuthUser | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, filter, query, order]);
 
-  useEffect(() => {
-    void load("initial");
-  }, [load]);
-
-  /* ----- Muat ulang saat identitas berubah (login baru / user lain) ---- */
-  // Lapisan server memfilter daftar per peran (Pelapor hanya miliknya), jadi daftar
-  // wajib di-refetch begitu user berganti agar tidak menampilkan data sesi sebelumnya.
+  /* ----- Muat saat user tersedia (login pertama / refresh sesi) ---- */
+  // Efek mount lama dihapus: fetch sebelum login (tanpa token) pasti 401 dan
+  // meracuni state error sehingga login pertama sempat menampilkan
+  // "Gagal memuat laporan". Fetch hanya jalan setelah user ada.
   const lastUserIdRef = useRef<number | null>(null);
   // true bila sejak pemuatan terakhir sudah lewat keadaan "tamu" (logout / token mati).
   const needsFreshStartRef = useRef(false);
@@ -177,26 +174,24 @@ export function useReports(user: AuthUser | null) {
     }
     const prev = lastUserIdRef.current;
     lastUserIdRef.current = user.id;
-    // Pergantian sesi = sebelumnya ada akun, lalu logout, lalu masuk lagi (akun apa pun),
-    // atau langsung pindah akun. Muat pertama/refresh (prev null) BUKAN pergantian:
-    // filter dari URL dibiarkan utuh supaya tautan yang dibagikan tetap berfungsi.
     const accountChanged = prev !== null && (needsFreshStartRef.current || prev !== user.id);
     needsFreshStartRef.current = false;
+    // Bersihkan filter akun sebelumnya saat ganti sesi, lalu muat dari URL yang netral.
     if (accountChanged) {
       setSelectedIds([]);
       setAction(null);
-      // Bersihkan filter akun sebelumnya, lalu muat dari URL yang sudah netral.
       window.history.replaceState(null, "", window.location.pathname);
-      void load("initial");
-      return;
     }
-    // Muat pertama/refresh: data awal sudah ditangani efek mount, cukup disegarkan.
-    void load("silent");
+    // Lapisan server memfilter daftar per peran (Pelapor hanya miliknya), jadi
+    // daftar wajib di-fetch setiap sesi terbentuk — login pertama maupun refresh.
+    void load("initial");
   }, [user, load]);
 
   /* ----- Refresh otomatis tiap 15 detik + saat tab kembali terlihat ----- */
   // Poll diam-diam ("poll"): tidak ada spinner, tidak ada toast bila gagal.
+  // Guard user: tanpa sesi, fetch pasti 401 dan meracuni state error.
   useEffect(() => {
+    if (!user) return;
     const id = window.setInterval(() => {
       if (document.hidden) return;
       void load("poll");
@@ -209,7 +204,7 @@ export function useReports(user: AuthUser | null) {
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load]);
+  }, [load, user]);
 
   /* ----- Ubah filter/pencarian/urutan/limit: selalu kembali ke halaman 1 ----- */
   const changeFilter = useCallback((value: StatusFilter) => {
