@@ -166,7 +166,7 @@ npm run dev               # http://localhost:3001
 ```bash
 npm run lint
 npm run typecheck
-npm test                  # 79 tests
+npm test                  # 87 tests (86 lolos, 1 dilewati)
 ```
 
 ### 3. Frontend (React)
@@ -235,7 +235,7 @@ Mapid_Rekrutmen/
 │   │   ├── errors.ts             # AppError + handler
 │   │   ├── rateLimit.ts          # rate limiter in-memory
 │   │   └── types.ts
-│   ├── tests/                    # 79 tests
+│   ├── tests/                    # 87 tests (86 lolos, 1 dilewati)
 │   ├── schema.sql / rls.sql / seed.sql
 │   └── .env.example
 │
