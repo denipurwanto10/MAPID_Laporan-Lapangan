@@ -132,7 +132,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
   const canEditThis = pending && (isOwner || isAdmin);
   // Approver tidak boleh menghapus; pemilik boleh menghapus; admin boleh.
   const canDeleteThis = pending && (isOwner || isAdmin) && canDelete;
-  const canUndo = !pending && isDecider && shown?.status === "rejected" ? "approved" : !pending && isDecider && shown?.status === "approved" ? "rejected" : null;
+  const revisionTarget = !pending && isDecider && shown?.status === "rejected" ? "approved" : !pending && isDecider && shown?.status === "approved" ? "rejected" : null;
   // Tombol yang sudah jadi status saat ini di-disable; yang satunya (revisi) tetap aktif.
   const disableApprove = shown?.status === "approved";
   const disableReject = shown?.status === "rejected";
@@ -258,7 +258,7 @@ export function ReportDetail({ report, onClose, busy, canDelete, onApprove, onRe
                     </p>
                   )}
                 </>
-              ) : canUndo ? (
+              ) : revisionTarget ? (
                 <div className="grid grid-cols-2 gap-2">
                   <Button type="button" variant="approve" className="h-11" disabled={busy || disableApprove} onClick={() => onApprove(shown)}>
                     <Check aria-hidden="true" />

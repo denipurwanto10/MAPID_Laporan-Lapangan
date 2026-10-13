@@ -157,6 +157,12 @@ export function Profile() {
       toast.success("Password diganti. Masuk lagi.");
       await logout();
     } catch (err) {
+      // Sesi kedaluwarsa di tengah submit juga 401 — arahkan login ulang, bukan kira password salah.
+      if (err instanceof ApiError && err.status === 401 && err.message !== "Password lama tidak cocok.") {
+        toast.error("Sesi berakhir. Masuk lagi ya.");
+        await logout();
+        return;
+      }
       setError(err instanceof ApiError ? err.message : "Gagal mengganti password. Coba lagi.");
       setSaving(false);
     }

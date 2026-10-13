@@ -77,11 +77,6 @@ async function toApiError(res: Response, fallback: string): Promise<ApiError> {
   return new ApiError(res.status, body?.message ?? fallback);
 }
 
-/** Kolom sort (whitelist) — nilai dari user tidak pernah masuk ke SQL mentah. */
-function sortColumn(_order: SortOrder | undefined): "created_at" | "updated_at" {
-  return "created_at";
-}
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -111,7 +106,7 @@ export const api = {
       page: String(page),
       limit: String(limit),
       order: order === "oldest" ? "asc" : "desc",
-      sort: sortColumn(order),
+      sort: "created_at",
     });
     if (status !== "all") search.set("status", status);
     if (q.trim()) search.set("q", q.trim());
