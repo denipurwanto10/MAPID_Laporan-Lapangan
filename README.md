@@ -4,7 +4,7 @@ Aplikasi web untuk mengelola laporan lapangan: **Express.js (TypeScript)** + **P
 
 Dashboard untuk membuat laporan lapangan lalu memprosesnya jadi **approved** atau **rejected**, dengan jejak audit, approve/reject massal, dan ekspor Excel.
  
-| | |
+| | | 
 |---|---|
 | 🌐 **Aplikasi online** | https://mapid-reports.vercel.app |
 | 📦 **Repository** | https://github.com/denipurwanto10/MAPID_Laporan-Lapangan |
