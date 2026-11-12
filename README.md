@@ -1,4 +1,4 @@
-# Laporan Lapangan
+# Laporan Lapangan 
   
 Aplikasi web untuk mengelola laporan lapangan: **Express.js (TypeScript)** + **PostgreSQL (Supabase)** + **React (Vite)**.
 
